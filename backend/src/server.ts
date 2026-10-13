@@ -179,8 +179,18 @@ const server = http.createServer(async (req, res) => {
 
   // Pipeline execution endpoint (Real LangGraph multi-agent execution)
   if (req.method === "POST" && url.pathname === "/api/pipeline") {
+    let body: Record<string, unknown>;
     try {
-      const body = await parseBody(req);
+      body = await parseBody(req);
+    } catch {
+      sendJson(res, 400, {
+        success: false,
+        error: "Request body must be valid JSON.",
+      });
+      return;
+    }
+
+    try {
       const { action, streamId, creatorId, streamTitle, filePath, approvedClipId, updatedHook } = body as {
         action?: string;
         streamId?: string;
