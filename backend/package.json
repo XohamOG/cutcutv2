@@ -1,0 +1,19 @@
+{
+  "name": "@cutcut/backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Node.js Backend Server for Gaming Highlight Intelligence Agent",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "node --experimental-strip-types src/server.ts",
+    "dev": "node --experimental-strip-types src/server.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.42",
+    "@langchain/langgraph": "^0.2.55"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

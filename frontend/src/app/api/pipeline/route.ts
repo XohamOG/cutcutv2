@@ -3,11 +3,30 @@ import { buildGamingHighlightGraph } from "@/lib/langgraph/graph";
 import { MOCK_STREAMS, CREATOR_PROFILES } from "@/lib/mockData/presets";
 import { StreamMetadata, CreatorProfile, CandidateClip } from "@/lib/types/pipeline";
 
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, streamId, creatorId, approvedClipId, updatedHook } = body;
 
+    // Try delegating to dedicated Node.js backend if running
+    try {
+      const backendRes = await fetch(`${BACKEND_URL}/api/pipeline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(2000), // Quick check
+      });
+      if (backendRes.ok) {
+        const backendData = await backendRes.json();
+        return NextResponse.json({ ...backendData, source: "node_backend" });
+      }
+    } catch {
+      // Backend server not listening yet, fall back to embedded LangGraph graph
+    }
+
+    // Direct LangGraph execution
     const stream: StreamMetadata =
       MOCK_STREAMS.find((s) => s.id === streamId) || MOCK_STREAMS[0];
     const creator: CreatorProfile =
@@ -16,7 +35,6 @@ export async function POST(request: Request) {
     const graph = buildGamingHighlightGraph();
 
     if (action === "run_to_review") {
-      // Execute graph up to human review checkpoint
       const initialState = {
         stream,
         creator,
@@ -32,11 +50,10 @@ export async function POST(request: Request) {
       };
 
       const result = await graph.invoke(initialState);
-      return NextResponse.json({ success: true, state: result });
+      return NextResponse.json({ success: true, state: result, source: "embedded_aai" });
     }
 
     if (action === "approve_and_publish") {
-      // Streamer approved human review checkpoint
       const initialState = {
         stream,
         creator,
@@ -46,14 +63,13 @@ export async function POST(request: Request) {
         candidates: [],
         currentStage: "ingestion" as const,
         logs: [],
-        requireHumanReview: false, // Bypass pause
+        requireHumanReview: false,
         humanApproved: true,
         isCompleted: false,
       };
 
       const result = await graph.invoke(initialState);
 
-      // If user customized the hook in the review UI, update it
       if (updatedHook && result.candidates && result.candidates.length > 0) {
         result.candidates = result.candidates.map((c: CandidateClip) => {
           if (c.id === approvedClipId || !approvedClipId) {
@@ -65,7 +81,7 @@ export async function POST(request: Request) {
         });
       }
 
-      return NextResponse.json({ success: true, state: result });
+      return NextResponse.json({ success: true, state: result, source: "embedded_aai" });
     }
 
     // Default: run full end-to-end
@@ -83,7 +99,7 @@ export async function POST(request: Request) {
       isCompleted: true,
     });
 
-    return NextResponse.json({ success: true, state: result });
+    return NextResponse.json({ success: true, state: result, source: "embedded_aai" });
   } catch (error: unknown) {
     console.error("Pipeline graph execution error:", error);
     const message = error instanceof Error ? error.message : "Internal Error";

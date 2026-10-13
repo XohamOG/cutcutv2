@@ -1,29 +1,18 @@
 {
-  "name": "cutcut",
-  "version": "0.1.0",
+  "name": "cutcut-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "aai",
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@langchain/core": "^1.2.17",
-    "@langchain/langgraph": "^1.5.0",
-    "@types/canvas-confetti": "^1.9.0",
-    "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.56.0",
-    "next": "16.4.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.0",
-    "typescript": "^5"
+    "dev": "npm --workspace=@cutcut/frontend run dev",
+    "dev:frontend": "npm --workspace=@cutcut/frontend run dev",
+    "dev:backend": "npm --workspace=@cutcut/backend run dev",
+    "build:frontend": "npm --workspace=@cutcut/frontend run build",
+    "build:aai": "npm --workspace=@cutcut/aai run build",
+    "build": "npm --workspace=@cutcut/frontend run build"
   }
 }

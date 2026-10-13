@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CLUTCHCUT AI | Autonomous Gaming Highlight Clipping & Publishing Agent",
-  description: "Autonomous multi-agent gaming highlight intelligence system powered by Next.js, Node.js, and LangGraph. Ingests gameplay VODs, detects clutch plays, predicts virality, reformats to 9:16 vertical shorts, and publishes.",
+  title: "CUTCUT",
+  description: "Autonomous gaming highlight clipping engine.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

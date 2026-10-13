@@ -2,73 +2,110 @@
 ### Autonomous Gaming Highlight Clipping & Publishing Agent
 
 > **Domain:** Gaming & Esports Content  
-> **Tech Stack:** Next.js (App Router, Turbopack, TypeScript), Node.js, `@langchain/langgraph`, `@langchain/core`, Vanilla CSS Design System, `lucide-react`.
+> **Architecture:** Clean 3-Tier Monorepo (`frontend`, `backend`, `aai`)  
+> **Tech Stack:** Next.js (Turbopack, TypeScript), Node.js (API Server), `@langchain/langgraph` (Agentic AI), Vanilla CSS Design System.
 
 ---
 
-## 🎮 Problem Statement Overview
-Streamers and esports players spend hours manually scrubbing through 3–8 hour raw VODs just to find a single clutch moment to post on TikTok, YouTube Shorts, or Instagram Reels.
+## 📁 Project Structure
 
-**CLUTCHCUT AI** functions as an autonomous 24/7 AI video editor who watches every frame, identifies the exact 15–25 seconds destined to trend, reframes horizontal 16:9 gameplay to vertical 9:16 with dynamic facecam overlays, creates viral hooks & subtitles, and publishes or queues clips based on algorithmic virality predictions.
-
----
-
-## 🤖 10-Agent LangGraph Architecture
-
-The system coordinates 10 specialized agent nodes via a compiled LangGraph `StateGraph`:
-
-```mermaid
-graph TD
-    START([START VOD / Stream]) --> A1[1. Ingestion Agent]
-    A1 --> A2[2. Game Event Detection Agent]
-    A2 --> A3[3. Audio & Chat Excitement Agent]
-    A3 --> A4[4. Clip Candidate Generation Agent]
-    A4 --> A5[5. Virality & Engagement Ranking Agent]
-    A5 --> A6[6. Caption & Hook Generation Agent]
-    A6 --> A7[7. Vertical Reformatting Agent]
-    A7 --> A8[8. Rights & Safety Pre-Check Agent]
-    A8 --> Decision{Human Review Required?}
-    Decision -- Yes --> A9[9. Human-in-the-Loop Review Gate]
-    Decision -- Auto-Publish --> A10[10. Publishing & Scheduling Agent]
-    A9 --> A10
-    A10 --> A11[11. Performance Feedback Loop Agent]
-    A11 --> END([END / Dispatched])
+```
+d:\cutcut\
+├── aai\                       # 🧠 Agentic AI Module (LangGraph)
+│   ├── src\
+│   │   ├── agents\            # 10 Specialized Autonomous Agents
+│   │   │   ├── ingestionAgent.ts
+│   │   │   ├── gameEventAgent.ts
+│   │   │   ├── excitementAgent.ts
+│   │   │   ├── candidateAgent.ts
+│   │   │   ├── rankingAgent.ts
+│   │   │   ├── captionAgent.ts
+│   │   │   ├── reformattingAgent.ts
+│   │   │   ├── safetyAgent.ts
+│   │   │   ├── publishingAgent.ts
+│   │   │   └── feedbackAgent.ts
+│   │   ├── orchestrator.ts    # Compiled LangGraph StateGraph Engine
+│   │   ├── presets\           # Multi-game VOD telemetry & creator profiles
+│   │   ├── types\             # Pipeline state & telemetry TypeScript models
+│   │   └── index.ts           # Public module exports
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── backend\                   # ⚡ Node.js API Backend (Port 4000)
+│   ├── src\
+│   │   └── server.ts          # REST API server connecting routes to AAI
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── frontend\                  # 🎨 Next.js Web Application (Port 3000)
+│   ├── src\
+│   │   ├── app\               # App Router pages & API proxy
+│   │   │   ├── page.tsx       # Main dashboard & interactive tabs
+│   │   │   ├── layout.tsx     # Typography & metadata
+│   │   │   ├── globals.css    # Cyberpunk esports design system
+│   │   │   └── api\pipeline\  # Route connecting to Node.js backend
+│   │   └── components\        # Interactive UI components
+│   │       ├── Navbar.tsx
+│   │       ├── PipelineVisualizer.tsx
+│   │       ├── StreamIngestion.tsx
+│   │       ├── ClipStudio.tsx
+│   │       ├── BeforeAfterPlayer.tsx
+│   │       ├── LiveStreamMonitor.tsx
+│   │       ├── MultiGameAdapter.tsx
+│   │       ├── PerformanceDashboard.tsx
+│   │       ├── CreatorStyleStudio.tsx
+│   │       └── HighlightReelModal.tsx
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── package.json               # Root monorepo workspace coordinator
+├── .npmrc                     # Drive cache configuration
+└── README.md
 ```
 
-1. **Stream/VOD Ingestion Agent**: Chunks long-form VODs (10-minute analysis windows) and synchronizes game-event metadata feeds.
-2. **Game Event Detection Agent**: Analyzes HUD, kill-feeds, player health (e.g. 3 HP remaining), spike defuse clocks, and clutch ratios (1v3 / 1v4).
-3. **Audio & Chat Excitement Signal Agent**: Computes voice pitch (Hz), decibel spikes, Twitch chat message-rate acceleration (e.g. 8.4x baseline), and emote bursts (`PogChamp`, `W`, `KEKW`).
-4. **Clip Candidate Generation Agent**: Applies intelligent boundary padding (context lead-in + peak payoff + reaction tail) without cutting mid-sentence.
-5. **Virality & Engagement Ranking Agent**: Evaluates multidimensional virality factors (0–100 score) and categorizes S-Tier & A-Tier candidate packages.
-6. **Caption & Hook Generation Agent**: Generates bold 1–2 second retention hooks (`"3 BULLETS. 1 v 3. GAME POINT. 💀"`) and speech-synced subtitles.
-7. **Vertical Reformatting Agent**: Reframes 16:9 gameplay to 9:16 with center-of-action tracking, webcam/facecam picture-in-picture placement, and platform UI safe zones.
-8. **Rights & Safety Pre-Check Agent**: Scans background audio against DMCA copyright databases and verifies brand safety and profanity grades.
-9. **Publishing & Scheduling Agent**: Dispatches top clips immediately to YouTube Shorts & TikTok, and queues lower-priority clips for 7:00 PM peak-hour slots on Instagram Reels.
-10. **Performance Feedback Agent**: Correlates actual retention curves with predicted virality scores to dynamically recalibrate signal weights for future sessions.
-11. **Orchestrator Agent**: Manages the LangGraph state channels, handles error fallbacks, and halts at the human-in-the-loop review gate.
+---
+
+## 🤖 10-Agent LangGraph Pipeline (`aai/`)
+
+| Agent | File | Function |
+| :--- | :--- | :--- |
+| **1. Ingestion Agent** | `aai/src/agents/ingestionAgent.ts` | Chunks VODs into 10-minute analysis windows & syncs game telemetry |
+| **2. Game Event Agent** | `aai/src/agents/gameEventAgent.ts` | Detects clutch plays, 3 HP survival, defuse timers, killfeed cascades |
+| **3. Excitement Agent** | `aai/src/agents/excitementAgent.ts` | Correlates vocal pitch (480Hz spike) + chat surges (8.4x baseline) |
+| **4. Candidate Gen Agent** | `aai/src/agents/candidateAgent.ts` | Trims bounded clips (14s lead-in context + 8s reaction tail) |
+| **5. Virality Ranking Agent**| `aai/src/agents/rankingAgent.ts` | Ranks clips by engagement index (0–100) into S-Tier and A-Tier |
+| **6. Caption & Hook Agent**| `aai/src/agents/captionAgent.ts` | Generates 1-2s retention hooks & speech-synced yellow subtitles |
+| **7. Vertical Reformat Agent**| `aai/src/agents/reformattingAgent.ts` | 16:9 ➔ 9:16 action-center crop with webcam PiP & UI safe zones |
+| **8. Rights & Safety Agent**| `aai/src/agents/safetyAgent.ts` | DMCA audio copyright scanner & profanity brand-safety rating |
+| **9. Human Review Gate** | `aai/src/orchestrator.ts` | Creator opt-in pause point before publishing |
+| **10. Publishing Agent** | `aai/src/agents/publishingAgent.ts` | Auto-posts to Shorts/TikTok & schedules 7:00 PM peak slot for Reels |
+| **11. Performance Feedback** | `aai/src/agents/feedbackAgent.ts` | Compares retention curves against predicted scores to update weights |
 
 ---
 
-## 🌟 Advanced Features Implemented
+## 🚀 Running the Services
 
-1. **Live Clip-While-Streaming Mode**: Sub-minute clipper listening to live telemetry (chat velocity graph & streamer vocal pitch waveform) and publishing clips within 45 seconds of a live clutch play.
-2. **Multi-Game Signal Adaptation**: Demonstrates cross-genre event detection for **Valorant** (killfeed cascade, 3 HP clutch), **Rocket League** (0-second overtime aerial ceiling pinch), **Counter-Strike 2** (1v4 eco deagle ace with 0.4s defuse), and **Apex Legends** (final ring squad wipe).
-3. **Creator Style Memory**: Learned persona bank adjusting hook tone (`Hype & High Energy`, `Tactical Esports`, `Comedic Chaotic`), font typography, favorite keywords, and auto-publish virality thresholds.
-4. **Before/After Clip Comparison**: Dual-screen player showing raw 16:9 unedited footage side-by-side with the final autonomous 9:16 vertical Short with speech-synced yellow subtitles and glowing hooks.
-5. **Cross-Platform Performance Dashboard**: Multi-platform analytics comparing views, completion rates, and like ratios across Shorts, TikTok, and Reels with a 22-second retention dropoff curve.
-6. **Rights & Safety Pre-Check**: Automatic DMCA audio copyright check and advertiser-safety verification.
-7. **Auto-Generated Highlight Reel**: Compiles top clutch moments into a weekly compilation video complete with intro title drop, outro call-to-action, and chapter markers.
-
----
-
-## 🚀 Running Locally
-
+### 1. Run Everything from Root
 ```bash
-# Install dependencies (already installed)
-npm install
-
-# Start development server
+# Run both frontend and backend
 npm run dev
 ```
 
-Open `http://localhost:3000` in your browser.
+### 2. Run Independently
+```bash
+# In one terminal: Node.js Backend Server (Port 4000)
+npm run dev:backend
+
+# In another terminal: Next.js Frontend (Port 3000)
+npm run dev:frontend
+```
+
+---
+
+## 🌐 Endpoints
+
+- **Frontend UI:** `http://localhost:3000`
+- **Backend Health Check:** `http://localhost:4000/health`
+- **Backend Pipeline API:** `POST http://localhost:4000/api/pipeline`
+- **Backend Streams Feed:** `GET http://localhost:4000/api/streams`
+- **Backend Creators Feed:** `GET http://localhost:4000/api/creators`
