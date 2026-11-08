@@ -174,7 +174,6 @@ export default function SettingsSheet({ open, onClose, settings, onSettings, key
       </div>
 
       <div className={styles.group}>
-        <Toggle checked={settings.burnCaptions} onChange={(burnCaptions) => onSettings({ burnCaptions })}>add captions</Toggle>
         <Toggle checked={settings.watchVideo} onChange={(watchVideo) => onSettings({ watchVideo })}>watch the video too (slower, better picks)</Toggle>
         <Toggle checked={settings.outroEnabled} onChange={(outroEnabled) => onSettings({ outroEnabled })}>add end card</Toggle>
         <AnimatePresence initial={false}>

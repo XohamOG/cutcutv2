@@ -10,6 +10,7 @@ import { detectReactions, transcribeLocal } from "./localModels.ts";
 import { waveformBars } from "./progress.ts";
 import { measureAudio, openMedia, readPcm16k, type OpenedMedia } from "./media.ts";
 import { assertBrowserCanRender, outroLength, renderClip } from "./render.ts";
+import { DEFAULT_CAPTIONS } from "./templates.ts";
 import { deleteClip, hashKey, listRatings, loadClip, markRunFinished, remember, resumableSettings, saveClip, saveRating, setLastRun, sourceFingerprint, updateClip } from "./storage.ts";
 
 const REACTION_BEFORE_SEC = 8;
@@ -112,16 +113,17 @@ interface Placement {
 
 async function renderOne(media: OpenedMedia, m: SelectedMoment, options: ClipSettings, fp: string, file: File, place: Placement, onProgress: (f: number) => void): Promise<ClipResult> {
   const words = options.burnCaptions ? m.candidate.words : [];
+  const captions = options.captions ?? DEFAULT_CAPTIONS;
   const edit = {
     sourceFp: fp,
     windowStart: m.candidate.windowStart,
     windowEnd: m.candidate.windowEnd,
     endSec: m.endSec,
     words: m.candidate.words,
-    settings: { template: options.template, regions: options.regions, framing: options.framing, outro: options.outro, burnCaptions: options.burnCaptions },
+    settings: { template: options.template, regions: options.regions, framing: options.framing, outro: options.outro, burnCaptions: options.burnCaptions, captions },
   };
   // Everything that changes the pixels is in the id, so a new layout renders fresh.
-  const id = await hashKey({ fp, start: m.startSec, end: m.endSec, template: options.template, regions: options.regions, framing: options.framing, outro: options.outro, words: words.map((w) => w.text).join(" "), hook: m.hook, title: m.title });
+  const id = await hashKey({ fp, start: m.startSec, end: m.endSec, template: options.template, regions: options.regions, framing: options.framing, outro: options.outro, captions, words: words.map((w) => w.text).join(" "), hook: m.hook, title: m.title });
   const saved = await loadClip(id);
   if (saved) {
     await updateClip(id, { ...place, edit });
@@ -137,6 +139,7 @@ async function renderOne(media: OpenedMedia, m: SelectedMoment, options: ClipSet
     framing: options.framing,
     outro: options.outro,
     words,
+    captions,
     title: m.title,
     hook: m.hook,
     onProgress,

@@ -1,4 +1,4 @@
-import type { CamBorder, FramingOptions, OutroOptions, Rect, SplitRegions, TemplateId, Word } from "./types";
+import type { CamBorder, CaptionFont, CaptionStyle, FramingOptions, OutroOptions, Rect, SplitRegions, TemplateId, Word } from "./types";
 
 export const CANVAS_W = 1080;
 export const CANVAS_H = 1920;
@@ -9,6 +9,25 @@ export const SAFE_BOTTOM = CANVAS_H - 300;
 
 const FONT = 'Anton, Impact, "Arial Black", sans-serif';
 const MIN_REGION = 0.05;
+const MIN_CAPTION_SIZE = 48;
+const CAPTION_LINE_HEIGHT = 1.2;
+const CAPTION_STROKE = 1 / 7;
+const FALLBACK_FONTS = 'Impact, "Arial Black", sans-serif';
+const SAFE_SIDE = (CANVAS_W - SAFE_TEXT_WIDTH) / 2;
+
+export const CAPTION_FONTS: { id: CaptionFont; label: string; family: string; file: string }[] = [
+  { id: "anton", label: "anton", family: "Anton", file: "Anton-Regular.ttf" },
+  { id: "bangers", label: "bangers", family: "Bangers", file: "Bangers-Regular.woff2" },
+  { id: "archivo", label: "archivo black", family: "Archivo Black", file: "ArchivoBlack-Regular.woff2" },
+  { id: "luckiest", label: "luckiest guy", family: "Luckiest Guy", file: "LuckiestGuy-Regular.woff2" },
+  { id: "marker", label: "permanent marker", family: "Permanent Marker", file: "PermanentMarker-Regular.woff2" },
+];
+
+export const DEFAULT_CAPTIONS: CaptionStyle = { offsetX: 0, offsetY: 0, scale: 1, font: "anton" };
+export const CAPTION_SCALE_MIN = 0.6;
+export const CAPTION_SCALE_MAX = 1.5;
+
+const captionFamily = (font: CaptionFont) => `"${CAPTION_FONTS.find((f) => f.id === font)?.family ?? "Anton"}", ${FALLBACK_FONTS}`;
 
 export type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 /** Copies part of the source picture onto the canvas: a video element or a decoded frame. */
@@ -310,31 +329,65 @@ function strokedText(ctx: Ctx, text: string, x: number, y: number, fill: string,
   ctx.fillText(text, x, y);
 }
 
-/** Word-by-word caption: the spoken word turns the accent color and pops slightly larger. */
-export function drawCaption(ctx: Ctx, t: Template, line: Word[], activeIndex: number): void {
-  const texts = line.map((w) => w.text.toUpperCase());
-  let size = t.captionSize;
+/** Where a line's center lands: the template's spot plus the offset, kept inside the safe area. */
+export function placeCaption(t: Template, style: CaptionStyle, width: number, height: number): { x: number; y: number } {
+  return {
+    x: clamp(CANVAS_W / 2 + style.offsetX, SAFE_SIDE + width / 2, CANVAS_W - SAFE_SIDE - width / 2),
+    y: clamp(t.captionY + style.offsetY, SAFE_TOP + height / 2, SAFE_BOTTOM - height / 2),
+  };
+}
+
+/** The offsets that actually apply, so dragging past the edge leaves no dead zone. */
+export function settleCaption(t: Template, style: CaptionStyle, width: number, height: number): CaptionStyle {
+  const { x, y } = placeCaption(t, style, width, height);
+  return { ...style, offsetX: x - CANVAS_W / 2, offsetY: y - t.captionY };
+}
+
+/** The tallest and lowest offsets a line of this size can use. */
+export function captionOffsetRange(t: Template, scale: number): { min: number; max: number } {
+  const half = (t.captionSize * scale * CAPTION_LINE_HEIGHT) / 2;
+  return { min: SAFE_TOP + half - t.captionY, max: SAFE_BOTTOM - half - t.captionY };
+}
+
+function measureCaption(ctx: Ctx, t: Template, texts: string[], style: CaptionStyle) {
+  const family = captionFamily(style.font);
   const widthAt = (s: number) => {
-    ctx.font = `${s}px ${FONT}`;
+    ctx.font = `${s}px ${family}`;
     return ctx.measureText(texts.join(" ")).width;
   };
-  while (widthAt(size) > SAFE_TEXT_WIDTH && size > 48) size -= 4;
+  let size = Math.round(t.captionSize * style.scale);
+  while (widthAt(size) > SAFE_TEXT_WIDTH && size > MIN_CAPTION_SIZE) size -= 4;
+  return { family, size, width: widthAt(size), height: size * CAPTION_LINE_HEIGHT };
+}
+
+/** The area a line of subtitles covers, in canvas units. */
+export function captionBox(ctx: Ctx, t: Template, line: Word[], style: CaptionStyle): Box {
+  const { width, height } = measureCaption(ctx, t, line.map((w) => w.text.toUpperCase()), style);
+  const center = placeCaption(t, style, width, height);
+  return { x: center.x - width / 2, y: center.y - height / 2, w: width, h: height };
+}
+
+/** Word-by-word caption: the spoken word turns the accent color and pops slightly larger. */
+export function drawCaption(ctx: Ctx, t: Template, line: Word[], activeIndex: number, style: CaptionStyle = DEFAULT_CAPTIONS): void {
+  const texts = line.map((w) => w.text.toUpperCase());
+  const { family, size, width: total, height } = measureCaption(ctx, t, texts, style);
+  const center = placeCaption(t, style, total, height);
+  const stroke = size * CAPTION_STROKE;
 
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.font = `${size}px ${FONT}`;
+  ctx.font = `${size}px ${family}`;
   const space = ctx.measureText(" ").width;
-  let x = (CANVAS_W - widthAt(size)) / 2;
-  ctx.font = `${size}px ${FONT}`;
+  let x = center.x - total / 2;
   texts.forEach((text, i) => {
     const width = ctx.measureText(text).width;
     if (i === activeIndex) {
       const popped = Math.round(size * 1.12);
-      ctx.font = `${popped}px ${FONT}`;
-      strokedText(ctx, text, x - (ctx.measureText(text).width - width) / 2, t.captionY, t.accent, 18);
-      ctx.font = `${size}px ${FONT}`;
+      ctx.font = `${popped}px ${family}`;
+      strokedText(ctx, text, x - (ctx.measureText(text).width - width) / 2, center.y, t.accent, stroke * 1.12);
+      ctx.font = `${size}px ${family}`;
     } else {
-      strokedText(ctx, text, x, t.captionY, "#ffffff", 16);
+      strokedText(ctx, text, x, center.y, "#ffffff", stroke);
     }
     x += width + space;
   });
@@ -404,10 +457,10 @@ export interface Overlay {
   caption: { line: Word[]; activeIndex: number } | null;
 }
 
-export function drawOverlays(ctx: Ctx, t: Template, overlay: Overlay): void {
+export function drawOverlays(ctx: Ctx, t: Template, overlay: Overlay, style: CaptionStyle = DEFAULT_CAPTIONS): void {
   drawTitleBand(ctx, t, overlay.title);
   if (overlay.hook && !t.titleBand) drawHook(ctx, t, overlay.hook);
-  if (overlay.caption) drawCaption(ctx, t, overlay.caption.line, overlay.caption.activeIndex);
+  if (overlay.caption) drawCaption(ctx, t, overlay.caption.line, overlay.caption.activeIndex, style);
 }
 
 /** End card that fades in over the last frames. */
@@ -433,14 +486,18 @@ export function drawOutro(ctx: Ctx, t: Template, outro: OutroOptions, opacity: n
 
 let fontsReady: Promise<void> | null = null;
 
-/** Loads the caption font into the current page or worker. */
+/** Loads the caption fonts into the current page or worker. One failing leaves the others usable. */
 export function ensureFonts(): Promise<void> {
   fontsReady ??= (async () => {
     const scope = globalThis as unknown as { fonts?: FontFaceSet; document?: Document; location: Location };
     const set = scope.fonts ?? scope.document?.fonts;
     if (!set) return;
-    const face = new FontFace("Anton", `url(${scope.location.origin}/fonts/Anton-Regular.ttf)`);
-    set.add(await face.load());
+    await Promise.all(
+      CAPTION_FONTS.map(async ({ family, file }) => {
+        const face = await new FontFace(family, `url(${scope.location.origin}/fonts/${file})`).load().catch(() => null);
+        if (face) set.add(face);
+      })
+    );
   })().catch(() => undefined);
   return fontsReady;
 }

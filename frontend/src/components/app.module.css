@@ -1772,3 +1772,49 @@
     forced-color-adjust: none;
   }
 }
+
+/* Subtitles */
+.optionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+}
+
+.optionRow .scrub,
+.optionRow .line {
+  flex: 1 1 160px;
+  width: auto;
+  min-width: 0;
+}
+
+.previewBox {
+  position: relative;
+  width: fit-content;
+}
+
+.captionHandle {
+  position: absolute;
+  touch-action: none;
+  cursor: move;
+  border: 2px dashed rgb(255 255 255 / 0.85);
+  border-radius: 6px;
+  outline: 1px solid rgb(0 0 0 / 0.6);
+}
+
+.captionHandle::after {
+  position: absolute;
+  inset: -8px;
+  content: "";
+}
+
+.captionHandle:focus-visible {
+  outline: 2px solid var(--color-paper);
+  outline-offset: 2px;
+}
+
+@media (min-width: 721px) {
+  .options > .toggleRow {
+    max-width: 244px;
+  }
+}

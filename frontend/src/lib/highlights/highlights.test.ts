@@ -9,7 +9,7 @@ import { applyMoments, faceChange, findHype, learnTaste, matchScreenWords, motio
 import { chatExtras, quietThenLoud } from "./signals.ts";
 import { buildUserPrompt } from "./selection.ts";
 import { hashKey, resumableSettings, sourceFingerprint } from "./storage.ts";
-import { CANVAS_H, CANVAS_W, DEFAULT_FRAMING, SAFE_BOTTOM, SAFE_TOP, TEMPLATES, fitRegion, planFrame, regionRatio, resizeRegion, stretchRegion, wrapTitle } from "./templates.ts";
+import { CANVAS_H, CANVAS_W, DEFAULT_CAPTIONS, DEFAULT_FRAMING, SAFE_BOTTOM, SAFE_TOP, TEMPLATES, captionOffsetRange, placeCaption, settleCaption, fitRegion, planFrame, regionRatio, resizeRegion, stretchRegion, wrapTitle } from "./templates.ts";
 import { detectProvider, pickDefaultModel } from "./models.ts";
 import { applyCaptionEdits, clipWords } from "./captions.ts";
 import { checkBeforeStart } from "./preflight.ts";
@@ -242,7 +242,7 @@ test("Whisper's invented repeats are trimmed, while natural repetition stays", (
 
 test("saved progress never contains API keys", () => {
   const options: RunOptions = {
-    clipCount: 5, length: "auto", watchVideo: true, template: "stacked", regions: { cam: { x: 0, y: 0, w: 1, h: 1 }, game: { x: 0, y: 0, w: 1, h: 1 } }, framing: DEFAULT_FRAMING,
+    clipCount: 5, length: "auto", watchVideo: true, captions: DEFAULT_CAPTIONS, template: "stacked", regions: { cam: { x: 0, y: 0, w: 1, h: 1 }, game: { x: 0, y: 0, w: 1, h: 1 } }, framing: DEFAULT_FRAMING,
     outro: { enabled: true, message: "m", handle: "" }, burnCaptions: true,
     stt: { provider: "groq", apiKey: "secret-stt" }, llm: { provider: "anthropic", apiKey: "secret-llm", model: "x" },
   };
@@ -716,4 +716,36 @@ test("an epic moment is named, and the judge is told what stood out", () => {
   const prompt = buildUserPrompt("a.mp4", [c]);
   assert.match(prompt, /game sounds 80%/);
   assert.match(prompt, /words read from the screen:\n<untrusted>\nace/);
+});
+
+const captionTemplate = TEMPLATES[0];
+
+test("subtitles sit where the template puts them until moved", () => {
+  assert.deepEqual(placeCaption(captionTemplate, DEFAULT_CAPTIONS, 500, 130), { x: CANVAS_W / 2, y: captionTemplate.captionY });
+  assert.deepEqual(placeCaption(captionTemplate, { ...DEFAULT_CAPTIONS, offsetX: -100, offsetY: 200 }, 500, 130), { x: CANVAS_W / 2 - 100, y: captionTemplate.captionY + 200 });
+});
+
+test("subtitles can't leave the area platforms keep clear", () => {
+  const far = { ...DEFAULT_CAPTIONS, offsetX: 5000, offsetY: -5000 };
+  const placed = placeCaption(captionTemplate, far, 500, 130);
+  assert.equal(placed.y, SAFE_TOP + 65);
+  assert.equal(placed.x + 250, 990);
+  assert.equal(placeCaption(captionTemplate, { ...DEFAULT_CAPTIONS, offsetY: 5000 }, 500, 130).y, SAFE_BOTTOM - 65);
+});
+
+test("dragging past an edge leaves no dead zone", () => {
+  const settled = settleCaption(captionTemplate, { ...DEFAULT_CAPTIONS, offsetY: -5000 }, 500, 130);
+  assert.equal(captionTemplate.captionY + settled.offsetY, SAFE_TOP + 65);
+});
+
+test("the up-and-down range shrinks as subtitles grow", () => {
+  const small = captionOffsetRange(captionTemplate, 0.6);
+  const big = captionOffsetRange(captionTemplate, 1.5);
+  assert.ok(small.min < big.min && small.max > big.max);
+  assert.ok(small.min < 0 && small.max > 0);
+});
+
+test("subtitle choices survive a resume", () => {
+  const options = { clipCount: 5, length: "auto" as const, watchVideo: true, captions: { ...DEFAULT_CAPTIONS, font: "bangers" as const, scale: 1.3 }, template: "stacked" as const, regions: { cam: { x: 0, y: 0, w: 1, h: 1 }, game: { x: 0, y: 0, w: 1, h: 1 } }, framing: DEFAULT_FRAMING, outro: { enabled: false, message: "m", handle: "" }, burnCaptions: true, stt: { provider: "local" as const } };
+  assert.deepEqual(resumableSettings(options).captions, options.captions);
 });

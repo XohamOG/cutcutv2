@@ -52,6 +52,7 @@ export function resumableSettings(o: RunOptions): RunSettings {
     framing: o.framing,
     outro: o.outro,
     burnCaptions: o.burnCaptions,
+    captions: o.captions,
     watchVideo: o.watchVideo,
     sttProvider: o.stt.provider,
   };

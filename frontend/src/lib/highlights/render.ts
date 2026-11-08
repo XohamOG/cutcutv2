@@ -1,5 +1,5 @@
 import { AudioSample, BufferTarget, Conversion, Mp4OutputFormat, Output, QUALITY_HIGH, canEncodeAudio, canEncodeVideo } from "mediabunny";
-import type { FramingOptions, OutroOptions, SplitRegions, TemplateId, Word } from "./types";
+import type { CaptionStyle, FramingOptions, OutroOptions, SplitRegions, TemplateId, Word } from "./types";
 import type { OpenedMedia } from "./media.ts";
 import { captionAt, chunkWords } from "./captions.ts";
 import { CANVAS_H, CANVAS_W, drawFrame, drawOutro, drawOverlays, ensureFonts, getTemplate } from "./templates.ts";
@@ -41,6 +41,7 @@ export interface RenderInput {
   framing: FramingOptions;
   outro: OutroOptions;
   words: Word[];
+  captions: CaptionStyle;
   title: string;
   hook: string;
   onProgress: (fraction: number) => void;
@@ -86,7 +87,7 @@ export async function renderClip(input: RenderInput): Promise<Blob> {
           drawOutro(ctx, template, input.outro, Math.min(1, (t - clipDuration) / OUTRO_FADE_SEC));
           return canvas;
         }
-        drawOverlays(ctx, template, { title: input.hook || input.title, hook: t < HOOK_SEC ? input.hook : "", caption: captionAt(lines, t) });
+        drawOverlays(ctx, template, { title: input.hook || input.title, hook: t < HOOK_SEC ? input.hook : "", caption: captionAt(lines, t) }, input.captions);
         return canvas;
       },
     },

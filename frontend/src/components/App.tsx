@@ -2,8 +2,8 @@
 
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClipLength, FramingOptions, RunOptions, RunSettings, SplitRegions, TemplateId } from "@/lib/highlights/types";
-import { DEFAULT_FRAMING } from "@/lib/highlights/templates";
+import type { CaptionStyle, ClipLength, FramingOptions, RunOptions, RunSettings, SplitRegions, TemplateId } from "@/lib/highlights/types";
+import { DEFAULT_CAPTIONS, DEFAULT_FRAMING } from "@/lib/highlights/templates";
 import { SITE } from "@/lib/site";
 import ClipsScreen from "./ClipsScreen";
 import DropScreen from "./DropScreen";
@@ -47,6 +47,7 @@ export default function App() {
   const [template, setTemplate] = useState<TemplateId>("stacked");
   const [regions, setRegions] = useState<SplitRegions>(DEFAULT_REGIONS);
   const [framing, setFraming] = useState<FramingOptions>(DEFAULT_FRAMING);
+  const [captions, setCaptions] = useState<CaptionStyle>(DEFAULT_CAPTIONS);
   const [settings, setSettings] = useState<StudioSettings>({ burnCaptions: true, watchVideo: true, outroEnabled: false, outroMessage: "Follow for more", outroHandle: "" });
   const [keys, setKeys] = useState<StoredKeys>(loadKeys);
   const [remember, setRemember] = useState(() => localStorage.getItem(KEYS_STORAGE) !== null);
@@ -64,6 +65,7 @@ export default function App() {
     if (s.template) setTemplate(s.template);
     setRegions(s.regions);
     if (s.framing) setFraming({ ...DEFAULT_FRAMING, ...s.framing });
+    if (s.captions) setCaptions({ ...DEFAULT_CAPTIONS, ...s.captions });
     setSettings({ burnCaptions: s.burnCaptions, watchVideo: s.watchVideo ?? true, outroEnabled: s.outro.enabled, outroMessage: s.outro.message, outroHandle: s.outro.handle });
   }, []);
   const { run, savedClips, interrupted, notify, canNotify, start, cancel, reset, enableNotify, dismissInterrupted, clearSaved, editClip, rateClip } = useClipRun(restore);
@@ -106,6 +108,7 @@ export default function App() {
       framing,
       outro: { enabled: settings.outroEnabled, message: settings.outroMessage.trim() || "Follow for more", handle: settings.outroHandle.trim() },
       burnCaptions: settings.burnCaptions,
+      captions,
       watchVideo: settings.watchVideo,
       stt: { provider: keys.sttProvider, apiKey: keys.sttKey || undefined },
       llm: keys.llmKey ? { provider: keys.llmProvider, apiKey: keys.llmKey, model: keys.llmModel } : undefined,
@@ -142,7 +145,7 @@ export default function App() {
 
               {screen === "frame" && file && (
                 <>
-                  <FramingStudio file={file} template={template} onTemplate={setTemplate} regions={regions} onRegions={setRegions} framing={framing} onFraming={setFraming}>
+                  <FramingStudio file={file} template={template} onTemplate={setTemplate} regions={regions} onRegions={setRegions} framing={framing} onFraming={setFraming} captions={captions} onCaptions={setCaptions} showCaptions={settings.burnCaptions} onShowCaptions={(burnCaptions) => setSettings((s) => ({ ...s, burnCaptions }))}>
                     <Segment label="clip length" name="length" value={String(clipLength)} options={LENGTHS} onChange={(v) => setClipLength(v === "auto" ? "auto" : Number(v))} />
                   </FramingStudio>
                   <motion.div variants={item} className={styles.actionDock}>

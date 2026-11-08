@@ -28,6 +28,16 @@ export interface FramingOptions {
   border: CamBorder;
 }
 
+export type CaptionFont = "anton" | "bangers" | "archivo" | "luckiest" | "marker";
+
+/** How subtitles look and sit, relative to where the template would put them. */
+export interface CaptionStyle {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  font: CaptionFont;
+}
+
 export interface OutroOptions {
   enabled: boolean;
   message: string;
@@ -56,6 +66,7 @@ export interface RunOptions {
   framing: FramingOptions;
   outro: OutroOptions;
   burnCaptions: boolean;
+  captions: CaptionStyle;
   /** Also looks at the picture around each moment. Slower. */
   watchVideo: boolean;
   stt: SttChoice;
@@ -63,10 +74,10 @@ export interface RunOptions {
 }
 
 /** What a clip needs to be rendered again exactly as it was. */
-export type ClipSettings = Pick<RunOptions, "template" | "regions" | "framing" | "outro" | "burnCaptions">;
+export type ClipSettings = Pick<RunOptions, "template" | "regions" | "framing" | "outro" | "burnCaptions"> & Partial<Pick<RunOptions, "captions">>;
 
 /** Run settings kept for resuming. Never includes API keys. */
-export type RunSettings = Pick<RunOptions, "clipCount" | "length" | "template" | "regions" | "framing" | "outro" | "burnCaptions" | "watchVideo"> & {
+export type RunSettings = Pick<RunOptions, "clipCount" | "length" | "template" | "regions" | "framing" | "outro" | "burnCaptions" | "watchVideo"> & Partial<Pick<RunOptions, "captions">> & {
   sttProvider: SttProvider;
 };
 
