@@ -6,7 +6,6 @@ import { Pill, useStage } from "./ui";
 import styles from "./app.module.css";
 
 const BAR_SHAPE = [0.35, 0.6, 0.42, 0.8, 0.5, 0.3, 0.55, 1, 0.7, 0.45, 0.62, 0.34, 0.5, 0.92, 0.58, 0.4, 0.66, 0.3, 0.48, 0.74];
-const WORDS = ["THAT", "WAS", "INSANE"];
 
 /** Scrubs with the scroll position, so scrolling back runs the demo in reverse. */
 function useStepProgress(ref: RefObject<HTMLElement | null>): MotionValue<number> {
@@ -75,7 +74,7 @@ function FrameDemo({ p }: { p: MotionValue<number> }) {
   );
 }
 
-function ClipCard({ p, offset, tint, active }: { p: MotionValue<number>; offset: number; tint: string; active: number }) {
+function ClipCard({ p, offset, tint, words, active }: { p: MotionValue<number>; offset: number; tint: string; words: string[]; active: number }) {
   const x = useTransform(p, [0.05, 0.85], ["0%", `${offset * 108}%`]);
   const rotate = useTransform(p, [0.05, 0.85], [offset * 2, offset * 8]);
   const y = useTransform(p, [0.05, 0.85], ["0%", `${Math.abs(offset) * 7}%`]);
@@ -84,7 +83,7 @@ function ClipCard({ p, offset, tint, active }: { p: MotionValue<number>; offset:
       <span className={styles.demoPhoneCam} style={{ backgroundColor: tint }}><Face /></span>
       <span className={styles.demoPhoneGame} />
       <span className={styles.demoCaption}>
-        {WORDS.map((w, i) => <em key={w} className={i === active ? styles.demoWordOn : undefined}>{w}</em>)}
+        {words.map((w, i) => <em key={w} className={i === active ? styles.demoWordOn : undefined}>{w}</em>)}
       </span>
     </motion.div>
   );
@@ -93,9 +92,9 @@ function ClipCard({ p, offset, tint, active }: { p: MotionValue<number>; offset:
 function ClipsDemo({ p }: { p: MotionValue<number> }) {
   return (
     <div className={`${styles.demo} ${styles.demoFan}`}>
-      <ClipCard p={p} offset={-1} tint="var(--color-seafoam-panel)" active={0} />
-      <ClipCard p={p} offset={1} tint="var(--color-charcoal)" active={2} />
-      <ClipCard p={p} offset={0} tint="var(--color-signal-orange)" active={1} />
+      <ClipCard p={p} offset={-1} tint="var(--color-seafoam-panel)" words={["NO", "WAY", "BRO"]} active={0} />
+      <ClipCard p={p} offset={1} tint="var(--color-charcoal)" words={["CLIP", "THAT", "NOW"]} active={2} />
+      <ClipCard p={p} offset={0} tint="var(--color-signal-orange)" words={["THAT", "WAS", "INSANE"]} active={1} />
     </div>
   );
 }
