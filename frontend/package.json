@@ -6,24 +6,25 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test \"src/lib/highlights/*.test.ts\""
   },
   "dependencies": {
-    "@langchain/core": "^0.3.42",
-    "@langchain/langgraph": "^0.2.55",
-    "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.16.0",
-    "next": "16.4.0",
+    "@anthropic-ai/sdk": "^1.6.0",
+    "@huggingface/transformers": "^4.3.2",
+    "mediabunny": "^1.65.2",
+    "motion": "^14.10.1",
+    "next": "^16.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
-    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "^16.4.5",
     "typescript": "^5"
   }
 }
