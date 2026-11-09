@@ -5,7 +5,7 @@ import { VoiceAnalyzer } from "./voice.ts";
 import { analyzeSignals } from "./analyze.ts";
 import { applyVerdicts, clampClip, collapseRepeats, explainRanks, findNaturalEnd, findNaturalStart, finishSentence, judgeSystem, lengthLimits, MAX_CLIP_SEC, MIN_CLIP_SEC, quoteAtPeak, selectBySignals, snapToWords, type Verdict } from "./selection.ts";
 import { captionAt, chunkWords } from "./captions.ts";
-import { applyMoments, faceChange, findHype, learnTaste, matchScreenWords, motionStats, noticed, scoreChanged, screenScore, speechExtras } from "./moments.ts";
+import { HYPE_PHRASE_COUNT, applyMoments, faceChange, findHype, learnTaste, matchScreenWords, motionStats, noticed, scoreChanged, screenScore, speechExtras } from "./moments.ts";
 import { chatExtras, quietThenLoud } from "./signals.ts";
 import { buildUserPrompt } from "./selection.ts";
 import { hashKey, resumableSettings, sourceFingerprint } from "./storage.ts";
@@ -608,9 +608,54 @@ test("hype phrases are found however they're typed, and ordinary speech isn't", 
   assert.deepEqual(findHype("I went that way and got some loot"), []);
 });
 
+test("the hype list has over 1000 phrases after merging spellings", () => {
+  assert.ok(HYPE_PHRASE_COUNT > 1000, `only ${HYPE_PHRASE_COUNT}`);
+});
+
+test("Hindi hype is found in any spelling and in Hindi script", () => {
+  assert.deepEqual(findHype("BHAIII kya hogya"), findHype("bhai kya ho gaya"));
+  assert.deepEqual(findHype("bhai kya ho gaya"), ["bhai kya ho gaya"]);
+  assert.deepEqual(findHype("arey yr"), ["arre yaar"]);
+  assert.deepEqual(findHype("bohot sahi"), ["bahut sahi"]);
+  assert.deepEqual(findHype("भाई ये क्या हो गया!"), ["भाई ये क्या हो गया"]);
+  assert.deepEqual(findHype("मजा आ गया"), ["मज़ा आ गया"]);
+});
+
+test("one shout counts once, however many phrases sit inside it", () => {
+  assert.deepEqual(findHype("no way bro"), ["no way bro"]);
+  assert.deepEqual(findHype("what the hell was that"), ["what the hell was that"]);
+});
+
+test("ordinary talk doesn't look like hype, in either language", () => {
+  const ordinary = [
+    "okay so we are going to the north side and then we will loot that building",
+    "thanks for the follow and welcome to the stream everyone how is your day going",
+    "he went that way and I think she has a good gun but we need more ammo",
+    "let me check the map first, then we can talk about what to do next",
+    "what is this item and how much does it cost in the shop",
+    "the constructor of this class is not important right now",
+    "bhai aaj kya khana khaya tune",
+    "yaar kal college jana hai aur assignment bhi karna hai",
+    "main ghar pe hu aur thodi der mein khana khaunga",
+    "bhai tum log kaise ho aaj stream thodi late hai",
+    "ye gun achi hai lekin ammo kam hai",
+    "आज हम नया गेम खेलेंगे और आप लोग कमेंट में बताना",
+    "भाई आज खाना क्या बनाया है",
+    "मैं घर पर हूं और थोड़ी देर में आता हूं",
+  ];
+  for (const line of ordinary) assert.deepEqual(findHype(line), [], line);
+});
+
+test("a chat phrase needs more than one message", () => {
+  const at = { words: [], peakSec: 1000, windowStart: 900, windowEnd: 1050 };
+  assert.equal(speechExtras({ ...at, chatSample: ["omg"] }).hype, 0);
+  assert.equal(speechExtras({ ...at, chatSample: ["omg", "OMG bro"] }).hypePhrase, "omg");
+  assert.equal(speechExtras({ ...at, chatSample: ["bhai kya khela (x3)"] }).hypePhrase, "bhai kya khela");
+});
+
 test("speech around the peak gives hype and a pace burst", () => {
   const slow = Array.from({ length: 20 }, (_, i) => ({ start: 900 + i * 4, end: 900.3 + i * 4, text: "and" }));
-  const fast = Array.from({ length: 14 }, (_, i) => ({ start: 996 + i * 0.4, end: 996.3 + i * 0.4, text: i === 3 ? "wtf" : "go" }));
+  const fast = Array.from({ length: 14 }, (_, i) => ({ start: 996 + i * 0.4, end: 996.3 + i * 0.4, text: i === 3 ? "wtf" : "um" }));
   const extras = speechExtras({ words: [...slow, ...fast], peakSec: 1000, windowStart: 900, windowEnd: 1050, chatSample: [] });
   assert.equal(extras.hypePhrase, "wtf");
   assert.ok(extras.speechBurst! > 0.5);

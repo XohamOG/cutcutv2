@@ -1,4 +1,5 @@
 import type { Candidate, ClipResult, MomentExtras, Rating, Word } from "./types";
+import { HYPE_PHRASES, SAME_WORD } from "./hypePhrases.ts";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -100,18 +101,55 @@ export function applyMoments(candidates: Candidate[], taste: Taste = {}): Candid
     .sort((a, b) => b.score - a.score);
 }
 
-const HYPE_PHRASES = [
-  "no way", "lets go", "oh my god", "oh my gosh", "what the hell", "what the heck", "what the fuck", "holy shit", "holy moly", "holy crap",
-  "clip that", "clip it", "are you kidding", "i cant believe", "no shot", "we did it", "what just happened", "that was crazy", "that was insane", "thats insane",
-  "im dead", "omg", "wtf",
-];
-const HYPE_PATTERN = new RegExp(`\\b(${HYPE_PHRASES.join("|")})\\b`, "g");
+const SAME_WORDS = new Map(Object.entries(SAME_WORD));
 
-const plainText = (text: string) => text.toLowerCase().replace(/['’]/g, "").replace(/(.)\1{2,}/gu, "$1").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ");
+/** Reduces text to comparable words, so "BHAIII kya hogya" reads the same as "bhai kya ho gaya". Keeps Hindi vowel signs. */
+function hypeWords(text: string): string[] {
+  const plain = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f\u0901\u0902\u093c'’]/g, "").replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ");
+  return plain.split(/\s+/).filter(Boolean).flatMap((word) => {
+    const single = word.replace(/(.)\1+/gu, "$1");
+    return (SAME_WORDS.get(single) ?? single).split(" ");
+  });
+}
 
-/** Phrases people say at big moments, found in speech or chat. */
+const HYPE_LOOKUP = new Map<string, string>();
+for (const phrase of HYPE_PHRASES) {
+  const key = hypeWords(phrase).join(" ");
+  if (!HYPE_LOOKUP.has(key)) HYPE_LOOKUP.set(key, phrase);
+}
+const LONGEST_HYPE = Math.max(...[...HYPE_LOOKUP.keys()].map((key) => key.split(" ").length));
+
+/** Distinct phrases once spelling variants are merged. */
+export const HYPE_PHRASE_COUNT = HYPE_LOOKUP.size;
+
+/** Phrases people say at big moments, found in speech or chat. The longest match wins, so one shout counts once. */
 export function findHype(text: string): string[] {
-  return [...new Set(plainText(text).match(HYPE_PATTERN) ?? [])];
+  const words = hypeWords(text);
+  const found = new Set<string>();
+  for (let i = 0; i < words.length; ) {
+    let matched = 0;
+    for (let n = Math.min(LONGEST_HYPE, words.length - i); n > 0 && !matched; n--) {
+      const phrase = HYPE_LOOKUP.get(words.slice(i, i + n).join(" "));
+      if (phrase) {
+        found.add(phrase);
+        matched = n;
+      }
+    }
+    i += matched || 1;
+  }
+  return [...found];
+}
+
+const MIN_CHAT_MESSAGES = 2;
+
+/** One viewer's "omg" is nothing in a busy chat, so a phrase has to come from at least two messages. */
+function chatHype(lines: string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const line of lines) {
+    const repeats = Number(line.match(/\(x(\d+)\)$/)?.[1] ?? 1);
+    for (const phrase of findHype(line)) counts.set(phrase, (counts.get(phrase) ?? 0) + repeats);
+  }
+  return [...counts].filter(([, n]) => n >= MIN_CHAT_MESSAGES).map(([phrase]) => phrase);
 }
 
 const HYPE_BEFORE_SEC = 6;
@@ -127,7 +165,7 @@ function wordsPerSecond(words: Word[], from: number, to: number): number {
 /** What the words around the peak say: hype phrases and a sudden rush of speech. */
 export function speechExtras(c: Pick<Candidate, "words" | "peakSec" | "windowStart" | "windowEnd" | "chatSample">): MomentExtras {
   const near = c.words.filter((w) => w.end >= c.peakSec - HYPE_BEFORE_SEC && w.start <= c.peakSec + HYPE_AFTER_SEC).map((w) => w.text).join(" ");
-  const phrases = findHype(`${near} ${c.chatSample.join(" ")}`);
+  const phrases = [...new Set([...findHype(near), ...chatHype(c.chatSample)])];
   const extras: MomentExtras = { hype: phrases.length ? clamp01(0.5 + 0.25 * (phrases.length - 1)) : 0 };
   if (phrases.length) extras.hypePhrase = phrases[0];
   if (c.words.length >= MIN_WORDS_FOR_PACE) {
