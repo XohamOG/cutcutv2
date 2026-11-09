@@ -31,6 +31,9 @@ storage/
 *.mov
 frontend/public/exports/
 
+# launch ad, kept local only
+launch-video/
+
 # misc & OS
 .DS_Store
 Thumbs.db
