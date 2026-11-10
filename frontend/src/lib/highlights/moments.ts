@@ -169,7 +169,9 @@ export function speechExtras(c: Pick<Candidate, "words" | "peakSec" | "windowSta
   const extras: MomentExtras = { hype: phrases.length ? clamp01(0.5 + 0.25 * (phrases.length - 1)) : 0 };
   if (phrases.length) extras.hypePhrase = phrases[0];
   if (c.words.length >= MIN_WORDS_FOR_PACE) {
-    const usual = wordsPerSecond(c.words, c.windowStart, c.windowEnd);
+    const heardFrom = Math.max(c.windowStart, c.words[0].start);
+    const heardTo = Math.min(c.windowEnd, c.words[c.words.length - 1].end);
+    const usual = wordsPerSecond(c.words, heardFrom, heardTo);
     const burst = wordsPerSecond(c.words, c.peakSec - BURST_BEFORE_SEC, c.peakSec + BURST_AFTER_SEC);
     extras.speechBurst = usual > 0 ? clamp01((burst / usual - 1) / 1.5) : 0;
   }

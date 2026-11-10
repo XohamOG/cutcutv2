@@ -13,6 +13,7 @@ import { CANVAS_H, CANVAS_W, DEFAULT_CAPTIONS, DEFAULT_FRAMING, SAFE_BOTTOM, SAF
 import { detectProvider, pickDefaultModel } from "./models.ts";
 import { applyCaptionEdits, clipWords } from "./captions.ts";
 import { checkBeforeStart } from "./preflight.ts";
+import { GENTLE_SLOWDOWN, breathe, setGentle } from "./pace.ts";
 import { buildPostPrompt, cleanPostText, parsePostText, postSystem, tiktokCaption } from "./postText.ts";
 import { parseYouTubeId, studioUrl } from "./youtube.ts";
 import { WAVE_SLICES, overallProgress, stageLabel, waveformBars } from "./progress.ts";
@@ -564,10 +565,42 @@ test("the transcript sent for post text only covers the clip", () => {
 const device = { durationSec: 5280, clipCount: 5, length: "auto" as const, localTranscription: true, hasGpu: true, modelsCached: true, memoryGb: 8, freeBytes: 5e10 };
 
 test("the time estimate matches the measured long stream and grows with the work", () => {
-  assert.equal(checkBeforeStart(device).time, "About 12 minutes");
+  // The same stream took 12 minutes when every moment was transcribed in full.
+  assert.equal(checkBeforeStart(device).time, "About 11 minutes");
   assert.ok(checkBeforeStart({ ...device, length: 120 }).minutes > checkBeforeStart(device).minutes);
   assert.ok(checkBeforeStart({ ...device, hasGpu: false }).minutes > checkBeforeStart(device).minutes);
   assert.equal(checkBeforeStart({ ...device, durationSec: 60, clipCount: 1, localTranscription: false }).time, "Under a minute");
+});
+
+test("a free Groq key is suggested on weak machines and long runs, and not otherwise", () => {
+  const suggests = (input: Parameters<typeof checkBeforeStart>[0]) => checkBeforeStart(input).notes.some((n) => n.href === "/keys#groq");
+  assert.equal(suggests(device), false);
+  assert.equal(suggests({ ...device, hasGpu: false }), true);
+  assert.equal(suggests({ ...device, memoryGb: 4 }), true);
+  assert.equal(suggests({ ...device, durationSec: 6 * 3600 }), true);
+  assert.equal(suggests({ ...device, hasGpu: false, localTranscription: false }), false);
+});
+
+test("gentle mode is counted in the time estimate", () => {
+  const slower = checkBeforeStart({ ...device, gentle: true }).minutes;
+  assert.ok(Math.abs(slower - checkBeforeStart(device).minutes * GENTLE_SLOWDOWN) <= 1, `${slower} minutes`);
+});
+
+test("gentle mode rests after a stretch of work, and normal mode never waits", async () => {
+  setGentle(false);
+  const fast = performance.now();
+  await breathe();
+  assert.ok(performance.now() - fast < 20);
+  setGentle(true);
+  const busyUntil = performance.now() + 1600;
+  while (performance.now() < busyUntil);
+  const before = performance.now();
+  await breathe();
+  assert.ok(performance.now() - before >= 900, "rested about 60% of the work time");
+  const after = performance.now();
+  await breathe();
+  assert.ok(performance.now() - after < 20, "no second rest straight away");
+  setGentle(false);
 });
 
 test("the check warns about low memory and storage, and stays quiet when unknown", () => {

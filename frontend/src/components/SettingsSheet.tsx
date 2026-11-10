@@ -11,6 +11,7 @@ import styles from "./app.module.css";
 export interface StudioSettings {
   burnCaptions: boolean;
   watchVideo: boolean;
+  gentle: boolean;
   outroEnabled: boolean;
   outroMessage: string;
   outroHandle: string;
@@ -175,6 +176,7 @@ export default function SettingsSheet({ open, onClose, settings, onSettings, key
 
       <div className={styles.group}>
         <Toggle checked={settings.watchVideo} onChange={(watchVideo) => onSettings({ watchVideo })}>watch the video too (slower, better picks)</Toggle>
+        <Toggle checked={settings.gentle} onChange={(gentle) => onSettings({ gentle })}>go easy on my computer (slower, stays cool)</Toggle>
         <Toggle checked={settings.outroEnabled} onChange={(outroEnabled) => onSettings({ outroEnabled })}>add end card</Toggle>
         <AnimatePresence initial={false}>
           {settings.outroEnabled && (

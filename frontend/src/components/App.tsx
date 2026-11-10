@@ -4,6 +4,7 @@ import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CaptionStyle, ClipLength, FramingOptions, RunOptions, RunSettings, SplitRegions, TemplateId } from "@/lib/highlights/types";
 import { DEFAULT_CAPTIONS, DEFAULT_FRAMING } from "@/lib/highlights/templates";
+import { suggestGentle } from "@/lib/highlights/pace";
 import { SITE } from "@/lib/site";
 import ClipsScreen from "./ClipsScreen";
 import DropScreen from "./DropScreen";
@@ -48,7 +49,7 @@ export default function App() {
   const [regions, setRegions] = useState<SplitRegions>(DEFAULT_REGIONS);
   const [framing, setFraming] = useState<FramingOptions>(DEFAULT_FRAMING);
   const [captions, setCaptions] = useState<CaptionStyle>(DEFAULT_CAPTIONS);
-  const [settings, setSettings] = useState<StudioSettings>({ burnCaptions: true, watchVideo: true, outroEnabled: false, outroMessage: "Follow for more", outroHandle: "" });
+  const [settings, setSettings] = useState<StudioSettings>({ burnCaptions: true, watchVideo: true, gentle: true, outroEnabled: false, outroMessage: "Follow for more", outroHandle: "" });
   const [keys, setKeys] = useState<StoredKeys>(loadKeys);
   const [remember, setRemember] = useState(() => localStorage.getItem(KEYS_STORAGE) !== null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -59,16 +60,25 @@ export default function App() {
   const firstScreen = useRef(true);
   const { screen: screenVariants, item } = useStage();
 
+  const restored = useRef(false);
   const restore = useCallback((s: RunSettings) => {
+    restored.current = true;
     setClipCount(s.clipCount);
     if (s.length !== undefined) setClipLength(s.length);
     if (s.template) setTemplate(s.template);
     setRegions(s.regions);
     if (s.framing) setFraming({ ...DEFAULT_FRAMING, ...s.framing });
     if (s.captions) setCaptions({ ...DEFAULT_CAPTIONS, ...s.captions });
-    setSettings({ burnCaptions: s.burnCaptions, watchVideo: s.watchVideo ?? true, outroEnabled: s.outro.enabled, outroMessage: s.outro.message, outroHandle: s.outro.handle });
+    setSettings((now) => ({ burnCaptions: s.burnCaptions, watchVideo: s.watchVideo ?? true, gentle: s.gentle ?? now.gentle, outroEnabled: s.outro.enabled, outroMessage: s.outro.message, outroHandle: s.outro.handle }));
   }, []);
   const { run, savedClips, interrupted, notify, canNotify, start, cancel, reset, enableNotify, dismissInterrupted, clearSaved, editClip, rateClip } = useClipRun(restore);
+
+  // Gentle by default, unless this looks like a strong machine on mains power.
+  useEffect(() => {
+    void suggestGentle().then((gentle) => {
+      if (!restored.current) setSettings((s) => ({ ...s, gentle }));
+    });
+  }, []);
 
   useEffect(() => {
     const [keep, clear] = remember ? [localStorage, sessionStorage] : [sessionStorage, localStorage];
@@ -110,6 +120,7 @@ export default function App() {
       burnCaptions: settings.burnCaptions,
       captions,
       watchVideo: settings.watchVideo,
+      gentle: settings.gentle,
       stt: { provider: keys.sttProvider, apiKey: keys.sttKey || undefined },
       llm: keys.llmKey ? { provider: keys.llmProvider, apiKey: keys.llmKey, model: keys.llmModel } : undefined,
     };
@@ -150,7 +161,7 @@ export default function App() {
                   </FramingStudio>
                   <motion.div variants={item} className={styles.actionDock}>
                     <div className={styles.actionInfo}>
-                      <PreflightLine file={file} clipCount={clipCount} length={clipLength} localTranscription={keys.sttProvider === "local"} watchVideo={settings.watchVideo} />
+                      <PreflightLine file={file} clipCount={clipCount} length={clipLength} localTranscription={keys.sttProvider === "local"} watchVideo={settings.watchVideo} gentle={settings.gentle} />
                       <div className={styles.actionLinks}>
                         <button type="button" className={styles.link} onClick={() => setFile(null)}>back</button>
                         {!keys.llmKey && <button type="button" className={styles.link} onClick={() => setSettingsOpen(true)}>better picks with your own key</button>}

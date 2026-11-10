@@ -1,5 +1,6 @@
 import { AutoModelForAudioClassification, AutoProcessor, env, pipeline } from "@huggingface/transformers";
 import type { Word } from "./types";
+import { breathe } from "./pace.ts";
 
 env.allowLocalModels = false;
 
@@ -21,7 +22,7 @@ export type ProgressFn = (message: string) => void;
 type Device = "webgpu" | "wasm";
 let devicePromise: Promise<Device> | null = null;
 
-function detectDevice(): Promise<Device> {
+export function detectDevice(): Promise<Device> {
   devicePromise ??= (async () => {
     const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
     return (await gpu?.requestAdapter().catch(() => null)) ? "webgpu" : "wasm";
@@ -48,7 +49,7 @@ interface WordChunk {
   text: string;
   timestamp: [number, number | null];
 }
-type Transcriber = (audio: Float32Array, options: Record<string, unknown>) => Promise<{ chunks?: WordChunk[] }>;
+type Transcriber = ((audio: Float32Array, options: Record<string, unknown>) => Promise<{ chunks?: WordChunk[] }>) & { dispose: () => Promise<unknown> };
 
 let transcriberPromise: Promise<Transcriber> | null = null;
 
@@ -78,12 +79,23 @@ export async function transcribeLocal(pcm16k: Float32Array, onStatus: ProgressFn
       if (!last || start >= last.end - 0.05) words.push({ start, end, text: chunk.text.trim() });
     }
     if (piece.length < CHUNK_SEC * SAMPLE_RATE) break;
+    await breathe();
   }
   return words.filter((w) => w.text);
 }
 
+/** Frees the speech model once every moment is transcribed. It reloads from the browser cache if needed again. */
+export async function releaseSpeechModel(): Promise<void> {
+  const loading = transcriberPromise;
+  transcriberPromise = null;
+  await (await loading?.catch(() => null))?.dispose().catch(() => undefined);
+}
+
 /** Returns every sound class with its own independent 0..1 confidence. */
-type Classifier = (audio: Float32Array) => Promise<{ label: string; score: number }[]>;
+interface Classifier {
+  classify: (audio: Float32Array) => Promise<{ label: string; score: number }[]>;
+  dispose: () => Promise<unknown>;
+}
 
 let classifierPromise: Promise<Classifier> | null = null;
 
@@ -96,12 +108,13 @@ function loadClassifier(onStatus: ProgressFn): Promise<Classifier> {
       AutoModelForAudioClassification.from_pretrained(REACTION_MODEL, { device, dtype: "q8", progress_callback } as never),
     ]);
     const id2label = (model.config as unknown as { id2label: Record<number, string> }).id2label;
-    return async (audio) => {
+    const classify = async (audio: Float32Array) => {
       const { logits } = await model(await processor(audio));
       // AudioSet is multi-label: speech and laughter can both be true at once. The stock
       // pipeline uses softmax, which makes classes compete and pushes laughter to zero.
       return Array.from(logits.data as Float32Array, (logit, i) => ({ label: id2label[i], score: 1 / (1 + Math.exp(-logit)) }));
     };
+    return { classify, dispose: () => model.dispose() };
   })();
   return classifierPromise;
 }
@@ -122,7 +135,8 @@ export async function detectReactions(pcm16k: Float32Array, onStatus: ProgressFn
   let gameSound = 0;
   let voices = 0;
   for (let offset = 0; offset < pcm16k.length; offset += size) {
-    const labels = await classifier(pcm16k.subarray(offset, offset + size));
+    const labels = await classifier.classify(pcm16k.subarray(offset, offset + size));
+    await breathe();
     for (const { label, score } of labels) {
       if (LAUGH_LABELS.has(label)) laughter = Math.max(laughter, score);
       if (SHOUT_LABELS.has(label)) shout = Math.max(shout, score);
@@ -131,4 +145,11 @@ export async function detectReactions(pcm16k: Float32Array, onStatus: ProgressFn
     }
   }
   return { laughter, shout, gameSound, voices };
+}
+
+/** Frees the laughter model once every moment has been listened to. */
+export async function releaseReactionModel(): Promise<void> {
+  const loading = classifierPromise;
+  classifierPromise = null;
+  await (await loading?.catch(() => null))?.dispose().catch(() => undefined);
 }

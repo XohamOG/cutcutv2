@@ -69,6 +69,8 @@ export interface RunOptions {
   captions: CaptionStyle;
   /** Also looks at the picture around each moment. Slower. */
   watchVideo: boolean;
+  /** Rests between pieces of work so the computer stays cool. Slower. */
+  gentle?: boolean;
   stt: SttChoice;
   llm?: LlmKey;
 }
@@ -77,7 +79,7 @@ export interface RunOptions {
 export type ClipSettings = Pick<RunOptions, "template" | "regions" | "framing" | "outro" | "burnCaptions"> & Partial<Pick<RunOptions, "captions">>;
 
 /** Run settings kept for resuming. Never includes API keys. */
-export type RunSettings = Pick<RunOptions, "clipCount" | "length" | "template" | "regions" | "framing" | "outro" | "burnCaptions" | "watchVideo"> & Partial<Pick<RunOptions, "captions">> & {
+export type RunSettings = Pick<RunOptions, "clipCount" | "length" | "template" | "regions" | "framing" | "outro" | "burnCaptions" | "watchVideo"> & Partial<Pick<RunOptions, "captions" | "gentle">> & {
   sttProvider: SttProvider;
 };
 
@@ -218,3 +220,18 @@ export type WorkerEvent =
   | { type: "edited"; clip: ClipResult }
   | { type: "done" }
   | { type: "error"; message: string };
+
+/** How one run went on this device, kept so testers can send it with their ratings. No file names or keys. */
+export interface RunReport {
+  at: string;
+  outcome: "done" | "failed";
+  failedAt?: string;
+  error?: string;
+  streamMinutes: number;
+  clips: number;
+  options: { clipCount: number; watchVideo: boolean; gentle: boolean; transcription: SttProvider; judged: boolean };
+  device: { cores: number | null; memoryGb: number | null; models: "webgpu" | "wasm" | null };
+  /** Seconds spent in each stage. */
+  stages: Record<string, number>;
+  totalSec: number;
+}

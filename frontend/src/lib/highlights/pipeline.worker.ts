@@ -1,25 +1,48 @@
 /// <reference lib="webworker" />
-import type { AudioFeatures, Candidate, ClipResult, ClipSettings, EditRequest, RunOptions, RunRequest, SelectedMoment, WorkerEvent, WorkerRequest, Word } from "./types";
+import type { AudioFeatures, Candidate, ClipResult, ClipSettings, EditRequest, RunOptions, RunReport, RunRequest, SelectedMoment, WorkerEvent, WorkerRequest, Word } from "./types";
 import { analyzeSignals, applyReactionBoost } from "./analyze.ts";
 import { collapseRepeats, explainRanks, selectBySignals } from "./selection.ts";
 import { applyMoments, learnTaste, speechExtras } from "./moments.ts";
-import { createScreenReader, watchMoment, type ScreenReader } from "./vision.ts";
+import { createScreenReader, releaseFaceModel, watchMoment, type ScreenReader } from "./vision.ts";
 import { parseLiveChat } from "./signals.ts";
 import { listModels, judgeCandidates, transcribeRemote } from "./providers.ts";
-import { detectReactions, transcribeLocal } from "./localModels.ts";
+import { detectDevice, detectReactions, releaseReactionModel, releaseSpeechModel, transcribeLocal } from "./localModels.ts";
+import { breathe, setGentle } from "./pace.ts";
 import { waveformBars } from "./progress.ts";
 import { measureAudio, openMedia, readPcm16k, type OpenedMedia } from "./media.ts";
 import { assertBrowserCanRender, outroLength, renderClip } from "./render.ts";
 import { DEFAULT_CAPTIONS } from "./templates.ts";
-import { deleteClip, hashKey, listRatings, loadClip, markRunFinished, remember, resumableSettings, saveClip, saveRating, setLastRun, sourceFingerprint, updateClip } from "./storage.ts";
+import { deleteClip, hashKey, listRatings, loadClip, markRunFinished, remember, resumableSettings, saveClip, saveRating, saveRunReport, setLastRun, sourceFingerprint, updateClip } from "./storage.ts";
 
 const REACTION_BEFORE_SEC = 8;
 const REACTION_AFTER_SEC = 12;
 /** Reading the screen is the slowest step, so only the strongest moments get it. */
 const MAX_SCREEN_READS = 10;
+/** First pass: just enough speech around each peak for hype words and pace. */
+const SNIPPET_BEFORE_SEC = 8;
+const SNIPPET_AFTER_SEC = 12;
+/** Second pass: full windows only for the moments that can still become clips, plus spares for overlaps. */
+const FINALIST_SPARE = 3;
 
 const post = (event: WorkerEvent) => self.postMessage(event);
-const progress = (stage: string, fraction: number, message: string) => post({ type: "progress", stage, fraction, message });
+
+/** Time spent in each stage of the current run, for the run report. */
+const stageSeconds: Record<string, number> = {};
+let currentStage = "";
+let stageStartedAt = 0;
+
+function enterStage(stage: string) {
+  if (stage === currentStage) return;
+  const now = performance.now();
+  if (currentStage) stageSeconds[currentStage] = (stageSeconds[currentStage] ?? 0) + (now - stageStartedAt) / 1000;
+  currentStage = stage;
+  stageStartedAt = now;
+}
+
+const progress = (stage: string, fraction: number, message: string) => {
+  enterStage(stage);
+  post({ type: "progress", stage, fraction, message });
+};
 
 async function scoreReactions(media: OpenedMedia, candidates: Candidate[], fp: string): Promise<Candidate[]> {
   try {
@@ -38,21 +61,43 @@ async function scoreReactions(media: OpenedMedia, candidates: Candidate[], fp: s
   } catch (err) {
     post({ type: "warn", message: `Laughter detection was skipped: ${err instanceof Error ? err.message : "unknown error"}` });
     return candidates;
+  } finally {
+    await releaseReactionModel();
   }
 }
 
-async function transcribeCandidates(media: OpenedMedia, candidates: Candidate[], options: RunOptions, fp: string): Promise<boolean> {
+interface Pass {
+  span: (c: Candidate, durationSec: number) => { from: number; to: number };
+  label: string;
+  /** The share of the transcribing stage this pass covers. */
+  progress: [number, number];
+}
+
+const SNIPPETS: Pass = {
+  span: (c, durationSec) => ({ from: Math.max(c.windowStart, c.peakSec - SNIPPET_BEFORE_SEC), to: Math.min(c.windowEnd, durationSec, c.peakSec + SNIPPET_AFTER_SEC) }),
+  label: "Listening to moment",
+  progress: [0, 0.35],
+};
+const fullWindow: Pass["span"] = (c) => ({ from: c.windowStart, to: c.windowEnd });
+const FINALISTS: Pass = { span: fullWindow, label: "Transcribing finalist", progress: [0.35, 1] };
+const EVERY_MOMENT: Pass = { span: fullWindow, label: "Transcribing moment", progress: [0, 1] };
+
+/** Transcribes each candidate's span. A failed one keeps whatever words it already had. */
+async function transcribeCandidates(media: OpenedMedia, candidates: Candidate[], options: RunOptions, fp: string, pass: Pass): Promise<boolean> {
   let failed = 0;
   let lastError = "";
+  const [from, to] = pass.progress;
   for (const [i, c] of candidates.entries()) {
-    progress("transcribing", i / candidates.length, `Transcribing moment ${i + 1} of ${candidates.length}`);
+    const at = from + ((to - from) * i) / candidates.length;
+    progress("transcribing", at, `${pass.label} ${i + 1} of ${candidates.length}`);
+    const span = pass.span(c, media.durationSec);
     try {
-      c.words = await remember<Word[]>(`stt:${fp}:${options.stt.provider}:${c.windowStart}:${c.windowEnd}`, async () => {
-        const pcm = await readPcm16k(media, c.windowStart, c.windowEnd);
+      c.words = await remember<Word[]>(`stt:${fp}:${options.stt.provider}:${span.from}:${span.to}`, async () => {
+        const pcm = await readPcm16k(media, span.from, span.to);
         const words = options.stt.provider === "local"
-          ? await transcribeLocal(pcm, (message) => progress("transcribing", 0, message))
+          ? await transcribeLocal(pcm, (message) => progress("transcribing", at, message))
           : await transcribeRemote(options.stt, pcm);
-        return collapseRepeats(words).map((w) => ({ ...w, start: w.start + c.windowStart, end: w.end + c.windowStart }));
+        return collapseRepeats(words).map((w) => ({ ...w, start: w.start + span.from, end: w.end + span.from }));
       });
     } catch (err) {
       failed++;
@@ -85,6 +130,7 @@ async function watchCandidates(media: OpenedMedia, candidates: Candidate[], opti
     }
   } finally {
     await reader?.close().catch(() => undefined);
+    await releaseFaceModel();
   }
   if (failed) post({ type: "warn", message: `${failed} of ${candidates.length} moments couldn’t be watched (${lastError}), so they rely on sound and speech.` });
 }
@@ -173,7 +219,9 @@ async function renderAll(media: OpenedMedia, moments: SelectedMoment[], options:
       progress("rendering", i / moments.length, `Rendering clip ${i + 1} of ${moments.length}`);
       const clip = await renderOne(media, m, options, fp, file, { rank: rendered + 1, rankReason: rankReasons[i] }, (f) => progress("rendering", (i + f) / moments.length, `Rendering clip ${i + 1} of ${moments.length}`));
       rendered++;
+      runClips = rendered;
       post({ type: "clip", clip });
+      await breathe();
     } catch (err) {
       post({ type: "warn", message: `Clip ${i + 1} failed and was skipped: ${err instanceof Error ? err.message : "unknown error"}` });
     }
@@ -181,7 +229,32 @@ async function renderAll(media: OpenedMedia, moments: SelectedMoment[], options:
   if (!rendered) throw new Error("Every selected clip failed to render.");
 }
 
+let runClips = 0;
+let streamMinutes = 0;
+let runStartedAt = 0;
+
+/** Saves how the run went on this device. Never blocks or fails the run. */
+async function report(options: RunOptions, outcome: RunReport["outcome"], error?: string): Promise<void> {
+  const failedAt = currentStage;
+  enterStage("");
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const usedModels = options.stt.provider === "local" || Object.keys(stageSeconds).includes("reactions");
+  const entry: RunReport = {
+    at: new Date().toISOString(),
+    outcome,
+    ...(outcome === "failed" ? { failedAt, error: error?.slice(0, 200) } : {}),
+    streamMinutes,
+    clips: runClips,
+    options: { clipCount: options.clipCount, watchVideo: options.watchVideo, gentle: options.gentle ?? false, transcription: options.stt.provider, judged: Boolean(options.llm) },
+    device: { cores: nav.hardwareConcurrency ?? null, memoryGb: nav.deviceMemory ?? null, models: usedModels ? await detectDevice().catch(() => null) : null },
+    stages: Object.fromEntries(Object.entries(stageSeconds).map(([k, v]) => [k, Math.round(v)])),
+    totalSec: Math.round((performance.now() - runStartedAt) / 1000),
+  };
+  await saveRunReport(entry).catch(() => undefined);
+}
+
 async function run({ file, chatText, options }: RunRequest): Promise<void> {
+  setGentle(options.gentle ?? false);
   await assertBrowserCanRender();
   if (options.llm) {
     progress("keys", 0, "Checking your API key");
@@ -193,6 +266,7 @@ async function run({ file, chatText, options }: RunRequest): Promise<void> {
 
   progress("measuring", 0, "Opening your video");
   const media = await openMedia(file);
+  streamMinutes = Math.round(media.durationSec / 60);
   const features = await remember<AudioFeatures>(`features:${fp}`, () =>
     measureAudio(media, (f, loudnessSoFar) => {
       progress("measuring", f, `Measuring voice and audio: ${Math.round(f * 100)}%`);
@@ -212,17 +286,26 @@ async function run({ file, chatText, options }: RunRequest): Promise<void> {
   post({ type: "moments", positions: found.map((c) => c.peakSec / media.durationSec) });
 
   const reacted = await scoreReactions(media, found, fp);
-  const usedTranscript = await transcribeCandidates(media, reacted, options, fp);
+  // With many moments, short snippets rank them all and only the finalists get their full window, which is
+  // where cuts and captions come from. With few, every moment is a finalist, so one full pass is quicker.
+  const finalistCount = options.llm ? options.clipCount * 2 : options.clipCount + FINALIST_SPARE;
+  const twoPasses = reacted.length > finalistCount;
+  const heard = await transcribeCandidates(media, reacted, options, fp, twoPasses ? SNIPPETS : EVERY_MOMENT);
   for (const c of reacted) c.extra = { ...c.extra, ...speechExtras(c) };
   await watchCandidates(media, reacted, options, fp);
-  const candidates = applyMoments(reacted, learnTaste(await listRatings()));
-  const { moments, usedLlm } = await chooseMoments(file, candidates, options, usedTranscript, fp);
+  const ranked = applyMoments(reacted, learnTaste(await listRatings()));
+  const finalists = ranked.slice(0, finalistCount);
+  const usedTranscript = twoPasses && heard ? (await transcribeCandidates(media, finalists, options, fp, FINALISTS)) || heard : heard;
+  await releaseSpeechModel();
+  const { moments, usedLlm } = await chooseMoments(file, finalists, options, usedTranscript, fp);
   post({ type: "summary", summary, usedTranscript, usedLlm });
 
   // A strict length is the length of the finished file, end card included.
   const fitted = options.length === "auto" ? moments : moments.map((m) => ({ ...m, endSec: m.endSec - outroLength(options.outro, m.endSec, media.durationSec) }));
   await renderAll(media, fitted, options, fp, file);
   await markRunFinished();
+  // Saved before "done", because the page closes this worker as soon as it hears it.
+  await report(options, "done");
   post({ type: "done" });
 }
 
@@ -265,8 +348,11 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
     editOne(request).catch((err: unknown) => post({ type: "error", message: err instanceof Error ? err.message : "That edit didn’t save." }));
     return;
   }
+  runStartedAt = performance.now();
   run(request).catch(async (err: unknown) => {
+    const message = err instanceof Error ? err.message : "The run failed.";
+    await report(request.options, "failed", message);
     await markRunFinished();
-    post({ type: "error", message: err instanceof Error ? err.message : "The run failed." });
+    post({ type: "error", message });
   });
 };

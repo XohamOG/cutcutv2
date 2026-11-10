@@ -31,8 +31,9 @@ storage/
 *.mov
 frontend/public/exports/
 
-# launch ad, kept local only
+# launch ad and marketing kit, kept local only
 launch-video/
+brand-kit/
 
 # misc & OS
 .DS_Store

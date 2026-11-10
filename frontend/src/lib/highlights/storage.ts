@@ -1,4 +1,4 @@
-import type { ClipResult, Rating, RunOptions, RunSettings } from "./types";
+import type { ClipResult, Rating, RunOptions, RunSettings, RunReport } from "./types";
 
 // Bump when analysis output changes shape or meaning, so old checkpoints are ignored.
 const CACHE_VERSION = 1;
@@ -54,6 +54,7 @@ export function resumableSettings(o: RunOptions): RunSettings {
     burnCaptions: o.burnCaptions,
     captions: o.captions,
     watchVideo: o.watchVideo,
+    gentle: o.gentle,
     sttProvider: o.stt.provider,
   };
 }
@@ -210,11 +211,24 @@ export async function listSavedClips(): Promise<SavedClip[]> {
   }
 }
 
-/** Removes every saved clip and checkpoint on this device. Ratings are kept for testing. */
+/** Removes every saved clip and checkpoint on this device. Ratings and run reports are kept for testing. */
 export async function clearSavedWork(): Promise<void> {
-  const ratings = await listRatings();
+  const [ratings, reports] = await Promise.all([listRatings(), listRunReports()]);
   await transact("readwrite", (s) => s.clear()).catch(() => undefined);
-  await Promise.all(ratings.map((r) => setValue(ratingKey(r.clipId), r)));
+  await Promise.all([...ratings.map((r) => setValue(ratingKey(r.clipId), r)), setValue(RUN_REPORTS_KEY, reports)]);
   const root = await navigator.storage.getDirectory();
   await root.removeEntry(CLIPS_DIR, { recursive: true }).catch(() => undefined);
+}
+
+const RUN_REPORTS_KEY = "runReports";
+const MAX_RUN_REPORTS = 30;
+
+/** Keeps the latest run reports, newest last. */
+export async function saveRunReport(report: RunReport): Promise<void> {
+  const reports = await listRunReports();
+  await setValue(RUN_REPORTS_KEY, [...reports, report].slice(-MAX_RUN_REPORTS));
+}
+
+export async function listRunReports(): Promise<RunReport[]> {
+  return (await getValue<RunReport[]>(RUN_REPORTS_KEY)) ?? [];
 }

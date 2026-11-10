@@ -1,6 +1,7 @@
 import { ALL_FORMATS, AudioSampleSink, BlobSource, Input, type AudioSample, type InputAudioTrack, type InputVideoTrack } from "mediabunny";
 import type { AudioFeatures } from "./types";
 import { VoiceAnalyzer } from "./voice.ts";
+import { breathe } from "./pace.ts";
 
 export interface OpenedMedia {
   input: Input;
@@ -38,6 +39,7 @@ export async function measureAudio(media: OpenedMedia, onProgress: (fraction: nu
     analyzer.push(toMono(sample));
     const at = sample.timestamp;
     sample.close();
+    await breathe();
     if (at - lastReport >= 30) {
       lastReport = at;
       onProgress(Math.min(1, at / media.durationSec), analyzer.features.loudnessDb);

@@ -22,6 +22,9 @@ export interface RunState {
 
 const canNotify = () => typeof Notification !== "undefined";
 
+type WakeLock = EventTarget & { release: () => Promise<void> };
+type WakeLockNavigator = Navigator & { wakeLock?: { request: (type: "screen") => Promise<WakeLock> } };
+
 export function useClipRun(onRestore: (settings: RunSettings) => void) {
   const [run, setRun] = useState<RunState | null>(null);
   const [savedClips, setSavedClips] = useState<ClipView[]>([]);
@@ -32,15 +35,37 @@ export function useClipRun(onRestore: (settings: RunSettings) => void) {
   const clipUrls = useRef<string[]>([]);
   const savedUrls = useRef<string[]>([]);
   const restore = useRef(onRestore);
+  const wakeLock = useRef<WakeLock | null>(null);
+  const running = useRef(false);
+
+  // A sleeping screen can pause the work, so the screen stays on while a run is going.
+  const holdAwake = async () => {
+    if (!running.current || wakeLock.current || document.visibilityState !== "visible") return;
+    const lock = await (navigator as WakeLockNavigator).wakeLock?.request("screen").catch(() => null);
+    if (!lock) return;
+    wakeLock.current = lock;
+    lock.addEventListener("release", () => {
+      if (wakeLock.current === lock) wakeLock.current = null;
+    });
+  };
 
   const stopWorker = () => {
     workerRef.current?.terminate();
     workerRef.current = null;
+    running.current = false;
+    void wakeLock.current?.release().catch(() => undefined);
+    wakeLock.current = null;
   };
   const release = (urls: { current: string[] }) => {
     urls.current.forEach((url) => URL.revokeObjectURL(url));
     urls.current = [];
   };
+
+  useEffect(() => {
+    const onVisible = () => void holdAwake();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -114,6 +139,8 @@ export function useClipRun(onRestore: (settings: RunSettings) => void) {
       setRun({ status: "running", overall: 0, label: "getting ready", stage: null, error: null, warnings: [], clips: [], bars: new Array(WAVE_SLICES).fill(null), moments: [] });
       const worker = new Worker(new URL("../lib/highlights/pipeline.worker.ts", import.meta.url), { type: "module" });
       workerRef.current = worker;
+      running.current = true;
+      void holdAwake();
       worker.onmessage = (message: MessageEvent<WorkerEvent>) => handleEvent(message.data);
       worker.onerror = (err) => handleEvent({ type: "error", message: err.message || "The processing worker crashed." });
       worker.postMessage({ type: "run", file, chatText: chatFile ? await chatFile.text() : null, options });

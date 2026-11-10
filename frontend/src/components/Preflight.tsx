@@ -39,7 +39,7 @@ async function readDevice(file: File): Promise<Device> {
   return { durationSec, hasGpu: Boolean(adapter), modelsCached, memoryGb: gpu.deviceMemory ?? null, freeBytes: free };
 }
 
-export default function PreflightLine({ file, clipCount, length, localTranscription, watchVideo }: { file: File; clipCount: number; length: ClipLength; localTranscription: boolean; watchVideo: boolean }) {
+export default function PreflightLine({ file, clipCount, length, localTranscription, watchVideo, gentle }: { file: File; clipCount: number; length: ClipLength; localTranscription: boolean; watchVideo: boolean; gentle: boolean }) {
   const [device, setDevice] = useState<Device | null>(null);
 
   useEffect(() => {
@@ -53,11 +53,17 @@ export default function PreflightLine({ file, clipCount, length, localTranscript
   }, [file]);
 
   if (!device || !device.durationSec) return null;
-  const check = checkBeforeStart({ ...device, clipCount, length, localTranscription, watchVideo });
+  const check = checkBeforeStart({ ...device, clipCount, length, localTranscription, watchVideo, gentle });
   return (
     <p className={styles.preflight}>
       <b>{check.time}</b>
-      {check.notes.map((n) => <span key={n.text} className={n.warn ? styles.preflightWarn : undefined}>{n.text}</span>)}
+      {check.notes.map((n) =>
+        n.href ? (
+          <a key={n.text} className={styles.link} href={n.href} target="_blank" rel="noreferrer">{n.text}</a>
+        ) : (
+          <span key={n.text} className={n.warn ? styles.preflightWarn : undefined}>{n.text}</span>
+        )
+      )}
       <span>Keep this tab open.</span>
     </p>
   );

@@ -1,4 +1,5 @@
 import { RawImage, pipeline, env } from "@huggingface/transformers";
+import { breathe } from "./pace.ts";
 import { VideoSampleSink, type VideoSample } from "mediabunny";
 import type { OpenedMedia } from "./media.ts";
 import { faceChange, matchScreenWords, motionStats, screenScore, scoreChanged, type MoodScores } from "./moments.ts";
@@ -26,7 +27,7 @@ const KILL_FEED: Rect = { x: 0.62, y: 0, w: 0.38, h: 0.3 };
 const BANNER: Rect = { x: 0.2, y: 0.2, w: 0.6, h: 0.35 };
 const SCOREBOARD: Rect = { x: 0.35, y: 0, w: 0.3, h: 0.1 };
 
-type MoodFn = (image: RawImage, options: { top_k: number }) => Promise<MoodScores>;
+type MoodFn = ((image: RawImage, options: { top_k: number }) => Promise<MoodScores>) & { dispose: () => Promise<unknown> };
 let moodPromise: Promise<MoodFn> | null = null;
 
 function loadMood(onStatus: (message: string) => void): Promise<MoodFn> {
@@ -37,6 +38,13 @@ function loadMood(onStatus: (message: string) => void): Promise<MoodFn> {
     return (await pipeline("image-classification", FACE_MODEL, options as never)) as unknown as MoodFn;
   })();
   return moodPromise;
+}
+
+/** Frees the face model once every moment has been watched. */
+export async function releaseFaceModel(): Promise<void> {
+  const loading = moodPromise;
+  moodPromise = null;
+  await (await loading?.catch(() => null))?.dispose().catch(() => undefined);
 }
 
 export interface ScreenReader {
@@ -150,6 +158,7 @@ export async function watchMoment(media: OpenedMedia, peakSec: number, options: 
     } finally {
       sample.close();
     }
+    await breathe();
   }
 
   const extras: MomentExtras = motionStats(frames, frameTimes, peakSec);

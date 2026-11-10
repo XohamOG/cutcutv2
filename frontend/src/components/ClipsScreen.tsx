@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { clipWords } from "@/lib/highlights/captions";
 import { noticed } from "@/lib/highlights/moments";
-import { listRatings } from "@/lib/highlights/storage";
+import { listRatings, listRunReports } from "@/lib/highlights/storage";
 import type { ClipChange, LlmKey, Rating } from "@/lib/highlights/types";
 import ClipEditor from "./ClipEditor";
 import PostSheet, { type PostResult } from "./PostSheet";
@@ -123,8 +123,8 @@ function ClipCard({ clip, sourceFile, onPickSource, llm, game, onGame, onOpenSet
 }
 
 async function downloadRatings() {
-  const ratings = await listRatings();
-  const url = URL.createObjectURL(new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ratings }, null, 2)], { type: "application/json" }));
+  const [ratings, runs] = await Promise.all([listRatings(), listRunReports()]);
+  const url = URL.createObjectURL(new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ratings, runs }, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = "viralbits-ratings.json";
