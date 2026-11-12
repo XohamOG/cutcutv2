@@ -230,6 +230,24 @@
   color: var(--color-ink);
 }
 
+.faq {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 68ch;
+  text-wrap: pretty;
+}
+
+.faq dd {
+  margin: 4px 0 0;
+}
+
+.cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
 .foot {
   padding-top: 18px;
   text-align: center;

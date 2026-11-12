@@ -106,6 +106,7 @@ export default function DropScreen({ onFile, interrupted, onDismiss, savedCount,
 
       <motion.div variants={item} className={styles.dropFooter}>
         <a className={styles.link} href="#how">how it works</a>
+        <a className={styles.link} href="/how-it-works">questions</a>
         {savedCount > 0 && <button type="button" className={styles.link} onClick={onShowSaved}>saved clips ({savedCount})</button>}
       </motion.div>
     </div>
