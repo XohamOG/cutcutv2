@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Sofia_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const display = Sofia_Sans({ subsets: ["latin"], weight: ["800"], variable: "--font-display" });
@@ -21,7 +22,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Page views only: no cookies, and nothing about the videos people clip. */}
+        <Analytics />
+      </body>
     </html>
   );
 }
