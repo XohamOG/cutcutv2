@@ -1,0 +1,13 @@
+candidate_id,candidate_name,email,skills_score,experience_score,assessment_score,application_role
+C101,Aarav Shah,aarav@example.com,85,70,90,Junior Software Developer
+C102,Diya Mehta,diya@example.com,70,80,75,Junior Software Developer
+C103,Kabir Patil,kabir@example.com,55,50,60,Junior Software Developer
+C104,Ira Desai,ira@example.com,90,85,95,Junior Software Developer
+C105,Neel Joshi,neel@example.com,40,35,45,Junior Software Developer
+C106,Riya Sharma,,80,75,70,Junior Software Developer
+C107,Vivaan Sen,vivaan@example.com,120,60,70,Junior Software Developer
+C101,Aarav Duplicate,aarav_dup@example.com,85,70,90,Junior Software Developer
+C108,Ananya Roy,ananya@example.com,75,75,75,Junior Software Developer
+C109,Rohan Verma,rohan@example.com,74.9,75,75,Junior Software Developer
+C110,Pooja Nair,pooja@example.com,50,50,50,Junior Software Developer
+C111,Sameer Kulkarni,sameer@example.com,45,40,40,Junior Software Developer

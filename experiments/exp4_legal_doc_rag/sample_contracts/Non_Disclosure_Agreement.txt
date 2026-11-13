@@ -1,0 +1,17 @@
+MUTUAL NON-DISCLOSURE AGREEMENT
+Document: Non_Disclosure_Agreement.txt
+Page: 1
+Section 1: Definition of Confidential Information
+Confidential Information includes all non-public technical, commercial, financial, and product data disclosed directly or indirectly by either party in oral, visual, or written form.
+
+Page: 2
+Section 2: Confidentiality Obligations and Non-Use
+The Receiving Party agrees to protect the Confidential Information of the Disclosing Party using at least the same degree of care it uses for its own confidential materials, but no less than reasonable care. Information shall not be disclosed to any third party without prior written consent.
+
+Page: 3
+Section 3: Duration and Survival
+The obligations of confidentiality under this Agreement shall survive termination and remain in effect for a period of five (5) years from the date of disclosure. Trade secrets shall remain confidential indefinitely.
+
+Page: 4
+Section 4: Exclusions from Confidentiality
+Confidential Information does not include information that is or becomes publicly known through no breach by Receiving Party, was already in Receiving Party's possession prior to disclosure, or is independently developed without reference to the confidential data.

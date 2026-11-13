@@ -1,0 +1,17 @@
+VENDOR SERVICES AGREEMENT
+Document: Vendor_Agreement.txt
+Page: 1
+Section 1: Scope of Work and Deliverables
+The Vendor shall furnish enterprise cloud deployment services, infrastructure monitoring, and security patching in accordance with Exhibit A.
+
+Page: 2
+Section 2: Payment and Invoicing Terms
+All invoices submitted by the Vendor are due and payable within thirty (30) days from the date of invoice receipt (Net 30). Late payments shall incur interest at the rate of 1.5% per month or the maximum rate permitted by law.
+
+Page: 3
+Section 3: Termination and Notice Period
+Either party may terminate this Agreement without cause upon providing sixty (60) days prior written notice to the other party. In the event of material breach, termination shall take effect within fifteen (15) days of written notice if the breach remains uncured.
+
+Page: 4
+Section 4: Governing Law and Dispute Resolution
+This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws principles.

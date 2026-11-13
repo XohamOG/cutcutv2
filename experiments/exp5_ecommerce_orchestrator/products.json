@@ -1,0 +1,57 @@
+[
+  {
+    "id": "LAP101",
+    "name": "ZenBook Ultra 14",
+    "brand": "Asus",
+    "category": "laptop",
+    "price": 68000,
+    "ram_gb": 16,
+    "storage_gb": 512,
+    "rating": 4.5,
+    "processor": "Intel Core i7 13th Gen"
+  },
+  {
+    "id": "LAP102",
+    "name": "IdeaPad Pro Slim",
+    "brand": "Lenovo",
+    "category": "laptop",
+    "price": 64500,
+    "ram_gb": 16,
+    "storage_gb": 512,
+    "rating": 4.3,
+    "processor": "AMD Ryzen 7 7730U"
+  },
+  {
+    "id": "LAP103",
+    "name": "Pavilion Gaming X",
+    "brand": "HP",
+    "category": "laptop",
+    "price": 69990,
+    "ram_gb": 16,
+    "storage_gb": 1024,
+    "rating": 4.4,
+    "processor": "Intel Core i5 13500H"
+  },
+  {
+    "id": "LAP104",
+    "name": "BudgetBook Go",
+    "brand": "Acer",
+    "category": "laptop",
+    "price": 42000,
+    "ram_gb": 8,
+    "storage_gb": 256,
+    "rating": 3.9,
+    "processor": "Intel Core i3 12th Gen"
+  },
+  {
+    "id": "LAP105",
+    "name": "MacBook Air M2",
+    "brand": "Apple",
+    "category": "laptop",
+    "price": 89000,
+    "ram_gb": 16,
+    "storage_gb": 512,
+    "rating": 4.8,
+    "processor": "Apple M2"
+  }
+]

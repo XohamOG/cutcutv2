@@ -1,0 +1,53 @@
+Timestamp,Stock_Symbol,Current_Price,Previous_Close,Price_Change,Percentage_Change,Decision,Reason,Risk_Level,Confidence,Status
+2026-11-13T18:34:32.027223,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:34:32.028640,BOUNDARY_BUY.NS,102.1,100.0,2.1,2.1,BUY,Percentage change (+2.1%) exceeded bullish threshold (> +2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:34:32.028640,BOUNDARY_HOLD.NS,101.5,100.0,1.5,1.5,HOLD,"Percentage change (1.5%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:34:32.028640,BOUNDARY_SELL.NS,97.5,100.0,-2.5,-2.5,SELL,Percentage change (-2.5%) breached bearish threshold (< -2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:34:32.029147,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:34:32.029684,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:34:32.029684,,0.0,0.0,0.0,0.0,INVALID,Empty or missing stock symbol.,N/A,N/A,INPUT_ERROR
+2026-11-13T18:34:32.029684,UNKNOWN_TICKER_999,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN_TICKER_999 not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:34:32.030211,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:34:32.030211,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:34:32.030211,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:34:32.030745,UNKNOWN.NS,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN.NS not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:34:32.030745,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:10.737120,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:10.738122,BOUNDARY_BUY.NS,102.1,100.0,2.1,2.1,BUY,Percentage change (+2.1%) exceeded bullish threshold (> +2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:43:10.738122,BOUNDARY_HOLD.NS,101.5,100.0,1.5,1.5,HOLD,"Percentage change (1.5%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:10.739122,BOUNDARY_SELL.NS,97.5,100.0,-2.5,-2.5,SELL,Percentage change (-2.5%) breached bearish threshold (< -2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:43:10.739122,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:10.739122,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:10.740122,,0.0,0.0,0.0,0.0,INVALID,Empty or missing stock symbol.,N/A,N/A,INPUT_ERROR
+2026-11-13T18:43:10.740122,UNKNOWN_TICKER_999,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN_TICKER_999 not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:43:10.740122,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:10.741119,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:10.741119,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:10.741119,UNKNOWN.NS,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN.NS not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:43:10.741119,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:27.254655,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:27.254655,BOUNDARY_BUY.NS,102.1,100.0,2.1,2.1,BUY,Percentage change (+2.1%) exceeded bullish threshold (> +2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:43:27.254655,BOUNDARY_HOLD.NS,101.5,100.0,1.5,1.5,HOLD,"Percentage change (1.5%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:27.255657,BOUNDARY_SELL.NS,97.5,100.0,-2.5,-2.5,SELL,Percentage change (-2.5%) breached bearish threshold (< -2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:43:27.255657,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:27.255657,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:27.255657,,0.0,0.0,0.0,0.0,INVALID,Empty or missing stock symbol.,N/A,N/A,INPUT_ERROR
+2026-11-13T18:43:27.255657,UNKNOWN_TICKER_999,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN_TICKER_999 not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:43:27.257155,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:27.257155,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:43:27.258167,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:43:27.258167,UNKNOWN.NS,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN.NS not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:43:27.258675,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:44:12.820405,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:44:12.820405,BOUNDARY_BUY.NS,102.1,100.0,2.1,2.1,BUY,Percentage change (+2.1%) exceeded bullish threshold (> +2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:44:12.821322,BOUNDARY_HOLD.NS,101.5,100.0,1.5,1.5,HOLD,"Percentage change (1.5%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:44:12.821322,BOUNDARY_SELL.NS,97.5,100.0,-2.5,-2.5,SELL,Percentage change (-2.5%) breached bearish threshold (< -2.0%),Medium Risk,Medium,SUCCESS
+2026-11-13T18:44:12.821322,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:44:12.821322,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:44:12.821322,,0.0,0.0,0.0,0.0,INVALID,Empty or missing stock symbol.,N/A,N/A,INPUT_ERROR
+2026-11-13T18:44:12.822323,UNKNOWN_TICKER_999,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN_TICKER_999 not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:44:12.822323,TCS.NS,4150.0,4050.0,100.0,2.47,BUY,Percentage change (+2.47%) exceeded bullish threshold (> +2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:44:12.822323,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS
+2026-11-13T18:44:12.822323,INFY.NS,1820.0,1810.0,10.0,0.55,HOLD,"Percentage change (0.55%) remains within neutral consolidation bounds [-2.0%, +2.0%]",Low Risk,Medium,SUCCESS
+2026-11-13T18:44:12.822323,UNKNOWN.NS,0.0,0.0,0.0,0.0,UNSUPPORTED,Stock UNKNOWN.NS not found in market feed.,N/A,N/A,NOT_FOUND
+2026-11-13T18:44:12.822323,RELIANCE.NS,2890.0,2980.0,-90.0,-3.02,SELL,Percentage change (-3.02%) breached bearish threshold (< -2.0%),Medium Risk,High,SUCCESS

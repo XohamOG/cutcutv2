@@ -1,0 +1,12 @@
+{
+  "rule_version": "1.0",
+  "criteria": {
+    "skills_score": 40,
+    "experience_score": 30,
+    "assessment_score": 30
+  },
+  "thresholds": {
+    "shortlist_review": 75,
+    "manual_review": 50
+  }
+}

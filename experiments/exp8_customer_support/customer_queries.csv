@@ -1,0 +1,15 @@
+query_id,customer_id,query_text,product,created_at
+Q001,C101,I cannot log in to my account,CloudCRM,2026-10-20T09:00:00
+Q002,C102,How can I upgrade my subscription?,CloudCRM,2026-10-20T09:10:00
+Q003,C103,My payment was deducted but the invoice is missing,CloudCRM,2026-10-20T09:15:00
+Q004,C104,The application is down for all our users service outage,CloudCRM,2026-10-20T09:20:00
+Q005,C105,Can you add dark mode to the dashboard?,CloudCRM,2026-10-20T09:25:00
+Q006,C106,The report export fails with an internal server error,CloudCRM,2026-10-20T09:30:00
+Q007,C107,What features are included in the basic plan?,CloudCRM,2026-10-20T09:35:00
+Q008,C108,My account is locked and I cannot access business data,CloudCRM,2026-10-20T09:40:00
+Q009,C109,Please explain how to configure two-factor authentication,CloudCRM,2026-10-20T09:45:00
+Q010,C110,The issue is still unresolved after trying all suggested steps,CloudCRM,2026-10-20T09:50:00
+Q011,C111,,CloudCRM,2026-10-20T09:55:00
+Q001,C112,Duplicate ID test query,CloudCRM,2026-10-20T10:00:00
+Q012,C113,It is not working.,CloudCRM,2026-10-20T10:05:00
+Q013,C114,How do I bake an apple pie?,CloudCRM,2026-10-20T10:10:00

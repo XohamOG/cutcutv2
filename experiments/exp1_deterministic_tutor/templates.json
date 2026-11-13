@@ -1,0 +1,55 @@
+{
+  "topics": [
+    {
+      "intent": "stack_concept",
+      "topic": "Stack Data Structure",
+      "keywords": ["stack", "lifo", "push", "pop"],
+      "definition": "A Stack is a linear data structure following the Last-In-First-Out (LIFO) principle where elements are inserted and deleted from the top.",
+      "algorithm": "Push: stack[top++] = x; Pop: return stack[--top]; Peek: return stack[top-1].",
+      "complexity": "Push: O(1), Pop: O(1), Peek: O(1), Search: O(n).",
+      "example": "Call stack in operating systems, undo-redo operations in text editors, bracket balancing.",
+      "summary": "Stack provides O(1) insertion and removal at one end obeying LIFO ordering."
+    },
+    {
+      "intent": "queue_concept",
+      "topic": "Queue Data Structure",
+      "keywords": ["queue", "fifo", "enqueue", "dequeue"],
+      "definition": "A Queue is a linear data structure following the First-In-First-Out (FIFO) principle where elements are inserted at the rear and removed from the front.",
+      "algorithm": "Enqueue: queue[rear++] = x; Dequeue: return queue[front++]; Peek: return queue[front].",
+      "complexity": "Enqueue: O(1), Dequeue: O(1), Search: O(n).",
+      "example": "CPU task scheduling, print spooling, breadth-first search traversal.",
+      "summary": "Queue regulates ordered task dispatch obeying FIFO ordering."
+    },
+    {
+      "intent": "binary_tree_concept",
+      "topic": "Binary Tree",
+      "keywords": ["binary tree", "tree node", "left child", "right child"],
+      "definition": "A Binary Tree is a hierarchical non-linear tree data structure in which each node has at most two children referred to as the left child and right child.",
+      "algorithm": "Traversal: Inorder (Left, Root, Right), Preorder (Root, Left, Right), Postorder (Left, Right, Root).",
+      "complexity": "Search/Insert/Delete: O(log n) in balanced binary search tree, O(n) in skewed tree.",
+      "example": "Expression parsing trees, Huffman coding compression, hierarchical file system representations.",
+      "summary": "Binary trees structure hierarchical relationships with logarithmic access in balanced configurations."
+    },
+    {
+      "intent": "time_complexity_concept",
+      "topic": "Asymptotic Time Complexity",
+      "keywords": ["time complexity", "big o", "asymptotic", "omega", "theta"],
+      "definition": "Time Complexity quantifies the computational execution time required by an algorithm as a mathematical function of input size n.",
+      "algorithm": "Count dominant primitive operations; express growth rate discarding lower-order terms and constant coefficients.",
+      "complexity": "O(1) Constant < O(log n) Logarithmic < O(n) Linear < O(n log n) Linearithmic < O(n^2) Quadratic < O(2^n) Exponential.",
+      "example": "Binary search has O(log n) complexity; Merge sort has O(n log n) complexity; Bubble sort has O(n^2) complexity.",
+      "summary": "Big-O notation provides a deterministic upper bound on algorithmic execution time."
+    }
+  ],
+  "clarifications": [
+    {
+      "ambiguous_term": "tree",
+      "clarification_question": "Do you mean Binary Trees, AVL Trees, B-Trees, or Decision Trees?"
+    },
+    {
+      "ambiguous_term": "sort",
+      "clarification_question": "Do you mean Quick Sort, Merge Sort, Heap Sort, or Insertion Sort?"
+    }
+  ],
+  "default_fallback": "Sorry, I can answer only predefined academic questions."
+}

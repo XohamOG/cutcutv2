@@ -1,0 +1,30 @@
+[
+  {
+    "article_id": "KB001",
+    "intent": "Login / Access",
+    "keywords": ["login", "password", "account", "locked"],
+    "approved": true,
+    "response": "Follow the approved account recovery procedure. If access remains blocked, contact support."
+  },
+  {
+    "article_id": "KB002",
+    "intent": "Billing",
+    "keywords": ["invoice", "payment", "billing", "deducted"],
+    "approved": true,
+    "response": "Review the billing portal and invoice history. If the payment is not reflected, contact the billing support team."
+  },
+  {
+    "article_id": "KB003",
+    "intent": "General Information",
+    "keywords": ["basic plan", "features", "subscription", "upgrade"],
+    "approved": true,
+    "response": "Refer to the current approved product plan and subscription documentation."
+  },
+  {
+    "article_id": "KB004",
+    "intent": "Technical Error",
+    "keywords": ["server error", "export", "application down"],
+    "approved": true,
+    "response": "Record the affected functionality and error details. Escalate service-wide outages or unresolved technical errors to the technical support team."
+  }
+]
