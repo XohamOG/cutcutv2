@@ -29,7 +29,7 @@ Planner ──► Listener ──► (Chat reader) ──► Reaction detector �
 | Router | Confidence (high / medium / low) and routing: keep, send to the person, or drop | confidence rules |
 | Editor | Cuts, frames and captions each clip | WebCodecs renderer |
 
-**LLM agent team:** when the [LangGraph backend](backend/README.md) is running, the Judge hands the finalists to a graph of model agents (Planner → parallel Screeners → Supervisor → Judge → Reviewer) and streams every step, model and token count back into the run trace. When it is not running, the in-browser judges are used exactly as before.
+**LLM agent team:** when the [LangGraph backend](backend/README.md) is running, the Judge hands the finalists to a graph of model agents (Planner and Screeners in parallel → Supervisor → Judge → Reviewer) and streams every step, model and token count back into the run trace. When it is not running, the in-browser judges are used exactly as before.
 
 Code: [`frontend/src/lib/highlights/agents.ts`](frontend/src/lib/highlights/agents.ts) (trace, tool chain, planner, router), wired into [`pipeline.worker.ts`](frontend/src/lib/highlights/pipeline.worker.ts). Tests: [`agents.test.ts`](frontend/src/lib/highlights/agents.test.ts).
 

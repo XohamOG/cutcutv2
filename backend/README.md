@@ -8,14 +8,18 @@ Only text is sent here: each moment's signal numbers, its transcript and its cha
 If the backend isn't running, the app uses its in-browser judges exactly as before.
 
 ```
-START → Planner ─┬─ many moments → Screener × N (parallel) ─┐
-                 └─ few moments  ───────────────────────────┴→ Supervisor → Judge ─┬→ Reviewer → END
-                                                                                    └→ END (failed: the browser falls back)
+START ─┬─ many moments → Planner ∥ Screener × N   (all at the same time) ─┐
+       └─ few moments  → Planner (rules only, no screening) ─────────────┴→ Supervisor → Judge ─┬→ Reviewer → END
+                                                                                                └→ END (failed: the browser falls back)
 ```
+
+The Planner and the Screeners don't need each other's output, so they run in the same step and the Supervisor
+joins them. The browser's on-device models stay sequential on purpose: they share one machine, so running them
+together adds no compute but holds every model in memory at once.
 
 | Agent | Model | Job |
 | :--- | :--- | :--- |
-| Planner | small (Groq gpt-oss-20b, low reasoning), or rules | How many finalists the Judge sees; skips screening when every moment fits |
+| Planner | small (Groq gpt-oss-20b, low reasoning), or rules | How many finalists the Judge sees, decided while the Screeners work; skips screening when every moment fits |
 | Screener | small, one call per 10 moments, in parallel | Rates every moment 0-10 from its signals and ~25 words around the peak |
 | Supervisor | rules | Fuses the screener's rating with the signal score and picks the finalists |
 | Judge | strong (Gemini Flash → Gemini Flash-Lite → Groq gpt-oss-120b) | Keeps or rejects each finalist, sets the cut, writes title and hook |

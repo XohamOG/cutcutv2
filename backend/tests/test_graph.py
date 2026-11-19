@@ -145,3 +145,35 @@ def test_one_bad_verdict_is_dropped_and_near_misses_are_corrected(tmp_path):
 def test_answers_wrapped_in_fences_or_sentences_still_parse():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert parse_json('Here you go: {"a": {"b": 2}} thanks') == {"a": {"b": 2}}
+
+
+def test_the_planner_and_the_screeners_run_at_the_same_time_and_the_supervisor_waits_for_all(tmp_path):
+    import time
+
+    events = []
+
+    class Slow(Fake):
+        def __call__(self, provider, model):
+            inner = super().__call__(provider, model)
+
+            async def chat(system, user, max_tokens):
+                name = system.split()[1]  # "plan", "screen", "are", "review"
+                events.append(("start", name, time.perf_counter()))
+                await asyncio.sleep(0.3)
+                out = await inner(system, user, max_tokens)
+                events.append(("end", name, time.perf_counter()))
+                return out
+
+            return chat
+
+    models = Models(settings(tmp_path), AnswerCache(tmp_path / "c.sqlite"), chat_factory=Slow())
+    out = run(models, request(25))
+    first = [e for e in events if e[1] in ("plan", "screen")]
+    starts = [t for kind, _, t in first if kind == "start"]
+    ends = [t for kind, _, t in first if kind == "end"]
+    assert len(starts) == 4  # planner + 3 screener batches
+    assert max(starts) < min(ends)  # all four were running before any finished
+    assert max(ends) - min(starts) < 0.9  # about one call's time, not four
+    agents = [s["agent"] for s in out["trace"]]
+    assert agents.count("supervisor") == 1
+    assert agents.index("supervisor") > max(i for i, a in enumerate(agents) if a in ("planner", "screener"))

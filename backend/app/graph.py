@@ -1,9 +1,12 @@
 """
 The agent team, as a LangGraph graph.
 
-    START → planner ─┬─ (many moments) → screener × N, in parallel ─┐
-                     └─ (few moments)  ─────────────────────────────┴→ supervisor → judge ─┬→ reviewer → END
-                                                                                            └→ END (judge failed: the browser falls back)
+    START ─┬─ (many moments) → planner  ∥  screener × N   (all in parallel) ─┐
+           └─ (few moments)  → planner (rules, no model, no screening) ──────┴→ supervisor → judge ─┬→ reviewer → END
+                                                                                                    └→ END (judge failed: the browser falls back)
+
+The planner and the screeners don't depend on each other (the screeners rate every moment; the planner only
+decides how many of them the judge will see), so they run in the same step and the supervisor joins them.
 
 Token rules: rules before models wherever rules are enough, the small model for wide work, the strong model
 only for the finalists, one batched call per agent, a token budget per run, and cached answers.
@@ -64,12 +67,19 @@ def model_steps(agent: str, action: str, reply: Reply) -> list[dict]:
 
 
 def build_graph(models: Models, max_run_tokens: int):
+    def finalist_range(req: JudgeRequest) -> tuple[int, int]:
+        n, want = len(req.candidates), req.clip_count
+        return min(n, want), min(n, max(want * 2, want + 3))
+
+    def needs_screening(req: JudgeRequest) -> bool:
+        return len(req.candidates) > finalist_range(req)[1]
+
     async def planner(state: RunState) -> dict:
         req = state["request"]
         n, want = len(req.candidates), req.clip_count
-        lo, hi = min(n, want), min(n, max(want * 2, want + 3))
+        lo, hi = finalist_range(req)
         has_chat = any(c.chat is not None for c in req.candidates)
-        if n <= hi:
+        if not needs_screening(req):
             # Every moment fits in the judge's view, so screening would only spend tokens.
             plan = {"finalists": n, "screen": False}
             return {"plan": plan, "trace": [step("planner", f"plan: judge all {n} moments, skip screening", tool="rules", detail=f"only {n} moments for {want} clips")]}
@@ -83,12 +93,14 @@ def build_graph(models: Models, max_run_tokens: int):
             finalists = min(hi, want + 3)
             return {"plan": {"finalists": finalists, "screen": True}, "trace": [step("planner", f"plan: screen {n}, judge {finalists}", "fallback", tool="rules", detail=str(err))]}
 
-    def fan_out(state: RunState):
-        if not state["plan"]["screen"]:
-            return "supervisor"
-        cands = state["request"].candidates
-        spent = state.get("tokens", 0)
-        return [Send("screener", {"batch": cands[i : i + SCREEN_BATCH], "index": i // SCREEN_BATCH + 1, "spent": spent}) for i in range(0, len(cands), SCREEN_BATCH)]
+    def start(state: RunState):
+        """Few moments: only the planner's rules. Many: the planner and every screener batch at once."""
+        req = state["request"]
+        if not needs_screening(req):
+            return ["planner"]
+        cands = req.candidates
+        batches = [Send("screener", {"batch": cands[i : i + SCREEN_BATCH], "index": i // SCREEN_BATCH + 1, "spent": 0}) for i in range(0, len(cands), SCREEN_BATCH)]
+        return ["planner", *batches]
 
     async def screener(payload: ScreenTask) -> dict:
         batch: list[CandidateIn] = payload["batch"]
@@ -200,8 +212,8 @@ def build_graph(models: Models, max_run_tokens: int):
     g.add_node("supervisor", supervisor)
     g.add_node("judge", judge)
     g.add_node("reviewer", reviewer)
-    g.add_edge(START, "planner")
-    g.add_conditional_edges("planner", fan_out, ["screener", "supervisor"])
+    g.add_conditional_edges(START, start, ["planner", "screener"])
+    g.add_edge("planner", "supervisor")
     g.add_edge("screener", "supervisor")
     g.add_edge("supervisor", "judge")
     g.add_conditional_edges("judge", after_judge, ["reviewer", END])
