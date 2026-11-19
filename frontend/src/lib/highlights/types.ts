@@ -1,3 +1,4 @@
+import type { PlanStep, RouteDecision, TraceStep } from "./agents.ts";
 /** "auto" lets each moment set its own length; a number is an exact length in seconds. */
 export type ClipLength = "auto" | number;
 export type TemplateId = "stacked" | "focus" | "banner";
@@ -177,6 +178,8 @@ export interface ClipResult {
   reason: string;
   /** Why this clip sits at its place in the ranking. */
   rankReason?: string;
+  /** The Router's call: kept automatically, or sent to the person to decide. */
+  route?: RouteDecision;
   selectedBy: "llm" | "signals";
   signals: Pick<Candidate, "voice" | "chat" | "laughter"> & Partial<Pick<Candidate, "shout" | "extra">>;
   /** Missing on clips made before editing existed. */
@@ -218,6 +221,10 @@ export type WorkerEvent =
   | { type: "summary"; summary: AnalysisSummary; usedTranscript: boolean; usedLlm: boolean }
   | { type: "clip"; clip: ClipResult }
   | { type: "edited"; clip: ClipResult }
+  /** What the Planner decided before any work started. */
+  | { type: "plan"; steps: PlanStep[] }
+  /** One finished agent step. */
+  | { type: "trace"; step: TraceStep }
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -234,4 +241,6 @@ export interface RunReport {
   /** Seconds spent in each stage. */
   stages: Record<string, number>;
   totalSec: number;
+  plan?: PlanStep[];
+  trace?: TraceStep[];
 }

@@ -5,7 +5,8 @@ import { useState } from "react";
 import { clipWords } from "@/lib/highlights/captions";
 import { noticed } from "@/lib/highlights/moments";
 import { listRatings, listRunReports } from "@/lib/highlights/storage";
-import type { ClipChange, LlmKey, Rating } from "@/lib/highlights/types";
+import type { ClipChange, LlmKey, Rating, RunReport } from "@/lib/highlights/types";
+import { RunTraceView } from "./AgentTrace";
 import ClipEditor from "./ClipEditor";
 import PostSheet, { type PostResult } from "./PostSheet";
 import Sheet from "./Sheet";
@@ -67,6 +68,7 @@ function ClipCard({ clip, sourceFile, onPickSource, llm, game, onGame, onOpenSet
       <div className={styles.clipMeta}>
         <span className={styles.rankBadge}>#{clip.rank}</span>
         <span>{clip.score}/100 · {Math.round(clip.durationSec)}s</span>
+        {clip.route && <span className={`${styles.chip} ${clip.route.route === "review" ? styles.chipReview : ""}`}>{clip.route.route === "review" ? "your call" : `${clip.route.confidence} confidence`}</span>}
         <span className={styles.rateRow}>
           <RateButton kind="up" active={clip.rating === "up"} onClick={() => rate("up")} />
           <RateButton kind="down" active={clip.rating === "down"} onClick={() => rate("down")} />
@@ -74,6 +76,9 @@ function ClipCard({ clip, sourceFile, onPickSource, llm, game, onGame, onOpenSet
       </div>
       <p className={styles.clipTitle}>{clip.title}</p>
       {clip.rankReason && <p className={styles.rankReason}>{clip.rankReason}</p>}
+      {clip.route?.route === "review" && !clip.rating && (
+        <p className={styles.reviewLine}>The agents weren’t sure: {clip.route.why}. Thumbs up keeps clips like this, thumbs down teaches it to skip them.</p>
+      )}
       <div className={styles.row}>
         <PillLink variant="orange" href={clip.url} download={name} onClick={onDownload}>
           <Swap id={saved ? "saved" : "idle"}>{saved ? "downloaded" : "download"}</Swap>
@@ -143,13 +148,16 @@ export default function ClipsScreen({ clips, file, llm, onOpenSettings, onEdit, 
   const [confirming, setConfirming] = useState(false);
   const [picked, setPicked] = useState<File | null>(null);
   const [game, setGame] = useState("");
+  const [lastRun, setLastRun] = useState<RunReport | null>(null);
   const { item } = useStage();
   const anyRated = clips.some((c) => c.rating);
+  const showTrace = async () => setLastRun((await listRunReports()).filter((r) => r.trace?.length).at(-1) ?? null);
   return (
     <div className={styles.clips}>
       <motion.div variants={item} className={styles.clipsHead}>
         <h1 className={styles.big}>{new Intl.PluralRules("en").select(clips.length) === "one" ? "1 clip" : `${clips.length} clips`}</h1>
         <div className={styles.row}>
+          <button type="button" className={styles.link} onClick={() => void showTrace()}>how this run worked</button>
           {anyRated && <button type="button" className={styles.link} onClick={() => void downloadRatings()}>download my ratings</button>}
           {onClear && (
             <button type="button" className={`${styles.link} ${confirming ? styles.linkDanger : ""}`} onClick={() => (confirming ? onClear() : setConfirming(true))}>
@@ -163,6 +171,13 @@ export default function ClipsScreen({ clips, file, llm, onOpenSettings, onEdit, 
         {/* Position, not id: an edit gives a clip a new id and its card should stay put. */}
         {clips.map((c, i) => <ClipCard key={i} clip={c} sourceFile={picked ?? file} onPickSource={setPicked} llm={llm} game={game} onGame={setGame} onOpenSettings={onOpenSettings} onEdit={onEdit} onRate={onRate} />)}
       </motion.div>
+      <Sheet open={Boolean(lastRun)} onClose={() => setLastRun(null)} label="How this run worked" desktop="side">
+        <div className={styles.sheetHead}>
+          <h2 className={styles.title}>how this run worked</h2>
+          <Pill variant="ghost" onClick={() => setLastRun(null)}>close</Pill>
+        </div>
+        {lastRun && <RunTraceView plan={lastRun.plan ?? []} trace={lastRun.trace ?? []} />}
+      </Sheet>
     </div>
   );
 }

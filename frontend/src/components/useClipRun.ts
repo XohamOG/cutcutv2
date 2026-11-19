@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClipChange, ClipResult, Rating, RunOptions, RunSettings, WorkerEvent } from "@/lib/highlights/types";
+import type { PlanStep, TraceStep } from "@/lib/highlights/agents";
 import { WAVE_SLICES, overallProgress, stageLabel } from "@/lib/highlights/progress";
 import { clearSavedWork, getLastRun, listSavedClips, markRunFinished, saveRating, type LastRun } from "@/lib/highlights/storage";
 import { SITE } from "@/lib/site";
@@ -18,6 +19,9 @@ export interface RunState {
   clips: ClipView[];
   bars: (number | null)[];
   moments: number[];
+  /** The Planner's agents for this run, and every agent step so far. */
+  plan: PlanStep[];
+  trace: TraceStep[];
 }
 
 const canNotify = () => typeof Notification !== "undefined";
@@ -108,6 +112,10 @@ export function useClipRun(onRestore: (settings: RunSettings) => void) {
             return { ...r, bars: event.bars };
           case "moments":
             return { ...r, moments: event.positions };
+          case "plan":
+            return { ...r, plan: event.steps };
+          case "trace":
+            return { ...r, trace: [...r.trace, event.step] };
           case "warn":
             return { ...r, warnings: [...r.warnings, event.message] };
           case "clip": {
@@ -136,7 +144,7 @@ export function useClipRun(onRestore: (settings: RunSettings) => void) {
       void navigator.storage?.persist?.();
       stopWorker();
       release(clipUrls);
-      setRun({ status: "running", overall: 0, label: "getting ready", stage: null, error: null, warnings: [], clips: [], bars: new Array(WAVE_SLICES).fill(null), moments: [] });
+      setRun({ status: "running", overall: 0, label: "getting ready", stage: null, error: null, warnings: [], clips: [], bars: new Array(WAVE_SLICES).fill(null), moments: [], plan: [], trace: [] });
       const worker = new Worker(new URL("../lib/highlights/pipeline.worker.ts", import.meta.url), { type: "module" });
       workerRef.current = worker;
       running.current = true;

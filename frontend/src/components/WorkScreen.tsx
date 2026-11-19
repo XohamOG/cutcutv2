@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { friendlyError } from "@/lib/highlights/errors";
 import type { RunState } from "./useClipRun";
+import { AgentBoard } from "./AgentTrace";
 import StreamWave from "./StreamWave";
 import { Pill, Swap, useStage } from "./ui";
 import styles from "./app.module.css";
@@ -44,6 +45,10 @@ export default function WorkScreen({ run, notify, canNotify, onNotify, onCancel,
 
       <motion.div variants={item} className={styles.waveHolder}>
         <StreamWave value={run.overall} bars={run.bars} moments={run.moments} label={run.label} />
+      </motion.div>
+
+      <motion.div variants={item}>
+        <AgentBoard plan={run.plan} trace={run.trace} stage={run.status === "running" ? run.stage : null} />
       </motion.div>
 
       <motion.div variants={item} className={styles.row}>

@@ -1,43 +1,49 @@
 # viralbits (CLUTCHCUT AI)
-### Autonomous Agentic Video Engineering & Enterprise Automation Platform
+### An agentic system that turns gaming streams into vertical clips
 > **Course:** Agentic AI Engg & Enterprise Automation Lab (26CMPC72)  
 > **Class:** B.E. (Computer Engineering) / Sem VII / D17  
-> **Branch Notice:** This branch (`lab-experiments`) contains the complete implementation and test suites for all Lab Manual Experiments (Exp-1 to Exp-9). It is isolated from `main` and production deployment.
+> **Branch notice:** This is the `lab-experiments` branch. The live site at viralbits.xyz is built from `main`, which this branch never changes.
 
 ---
 
-## 🧪 Lab Experiments Implementation Mapping (26CMPC72)
+## The app as an agentic system (Micro Project, Exp-9)
 
-The table below details how the concepts and technical requirements of each experiment from the lab manual are implemented and integrated within the project.
+A run is a team of agents with one shared trace. The **Planner** decides which agents and tools a run needs, **worker agents** each add evidence to the same candidate moments, the **Judge** reviews the finalists, the **Router** decides which clips are kept automatically and which go to the person, and the **Editor** renders them. Everything runs in the browser.
 
-| Experiment | Description (What the Experiment Says) | Implementation in Project (Where & How Implemented) |
+```
+Planner ──► Listener ──► (Chat reader) ──► Reaction detector ──► Transcriber ──► (Watcher) ──► Ranker ──► Judge ──► Router ──► Editor
+   │            every step is recorded in one Trace, streamed to the screen and saved with the run            │
+   └──────────── replans mid-run (one or two transcription passes) ──────────────── person reviews ◄──────────┘
+```
+
+| Agent | Job | Tools, in fallback order |
 | :--- | :--- | :--- |
-| **Exp-1** | **Deterministic Tutoring Agent:** Design a deterministic academic response system using rule-based logic and JSON templates, ensuring identical outputs for identical inputs without probabilistic hallucinations, incorporating clarification for ambiguous terms, self-reflection response validation, and adversarial prompt-injection guardrails. | Implemented in `experiments/exp1_deterministic_tutor/` (`tutor_agent.py`, `templates.json`, `logger.py`, `test_tutor.py`). Enforces strict contract templates, SQLite audit tracking, clarification for vague concepts, and active prompt-injection defense. Also powers the deterministic game event and clip reasoning rules in `frontend/src/lib/highlights/moments.ts`. |
-| **Exp-2** | **Agent-Driven Financial Advisory System:** Build a financial advisory system that fetches market data, calculates percentage changes, executes rule-based BUY/SELL/HOLD decisions (> +2% BUY, < -2% SELL, [-2%, +2%] HOLD), assesses moving average & volume indicators, outputs risk & confidence metrics, and protects trusted decisions against adversarial prompt injection. | Implemented in `experiments/exp2_financial_advisor/` (`advisor_agent.py`, `rule_engine.py`, `data_fetcher.py`, `test_advisor.py`, `financial_log.csv`). Features deterministic threshold rules, boundary tests, portfolio analysis, and prompt-injection guardrails. The metric thresholding concept directly reflects in viral clip score gating (`signals.ts`, `moments.ts`). |
-| **Exp-3** | **Clinical Research Assistant with Tool Integration:** Implement an intelligent healthcare assistant with standardized tool contracts, schemas, authorization policies, execution engine, error classification, controlled exponential retries (max 3), safe fallback tools, and adversarial safety tests. | Implemented in `experiments/exp3_clinical_assistant/` (`clinical_assistant.py`, `tool_contracts.py`, `execution_engine.py`, `test_clinical_assistant.py`, `clinical_research_interaction_log.csv`). Features `medical_calculator`, `medical_literature_search`, `healthcare_knowledge_search`, and safe failure principles. Parallels the tool pipeline in `frontend/src/lib/highlights/providers.ts` and `media.ts`. |
-| **Exp-4** | **Legal Document Intelligence & Retrieval System (RAG):** Build a multi-layer RAG pipeline for legal/compliance documents: ingestion, cleaning, chunking with metadata, vector semantic search, relevance thresholding, grounded response generation with document/page citations, grounding validation, and prompt-injection defense. | Implemented in `experiments/exp4_legal_doc_rag/` (`legal_rag.py`, `chunking.py`, `vector_index.py`, `test_legal_rag.py`, `audit_log.json`, `sample_contracts/`). Features TF-IDF vector indexing, traceable clause citations, grounding validation (`PASS`/`REVIEW`/`FAIL`), and out-of-domain rejection. Relates to subtitle transcription indexing in `frontend/src/lib/highlights/captions.ts`. |
-| **Exp-5** | **E-Commerce Product Analysis & Recommendation Multi-Agent Pipeline:** Coordinate 8 specialized agents (Planner, Router, Search, Filter, Comparison, Ranking, Validator, Supervisor) using a shared workflow state, sequential & parallel execution (DOP benchmark), human-in-the-loop approval, and cost metrics. | Implemented in `experiments/exp5_ecommerce_orchestrator/` (`orchestrator.py`, `agents.py`, `state.py`, `products.json`, `test_ecommerce.py`). Decomposes natural-language queries into constraints, executes parallel matrix comparison, ranks candidates, and verifies via human gate. Mirrors the multi-agent video analysis workflow in `aai/src/orchestrator.ts` and `frontend/src/lib/highlights/pipeline.worker.ts`. |
-| **Exp-6** | **Developer Automation System using MCP Protocol:** Implement Model Context Protocol client-server architecture with stdio transport, dynamic tool discovery (`list_tools`), 5 developer tools (file listing, reading, code search, AST code analysis, automated test execution), path traversal protection, dependency-aware workflow, and JSONL tracing. | Implemented in `experiments/exp6_mcp_developer/` (`mcp_server.py`, `mcp_client.py`, `test_mcp_developer.py`, `mcp_traces.jsonl`, `sample_project/`). Exposes 5 MCP tools with AST analysis, path security (`safe_project_path()`), parallel Phase 1 execution, and latency benchmarks. Connects with the Claude skills and agent tooling defined in `.claude/skills/`. |
-| **Exp-7** | **Automated Recruitment Workflow System (HR Domain):** Build an enterprise recruitment automation pipeline: candidate CSV ingestion, validation & duplicate quarantine, weighted scoring ($S = 0.40K + 0.30E + 0.30A$), multi-tier routing (Shortlist, Manual, Not-Shortlisted), human-in-the-loop approval actions, notification drafts, and audit logging. | Implemented in `experiments/exp7_recruitment_workflow/` (`recruitment_workflow.py`, `candidates.csv`, `rules.json`, `notifications.py`, `test_recruitment.py`, `audit_log.csv`, `rejected_records.csv`). Evaluates validation rate, quarantine mechanics, explainable score breakdown, and reviewer override actions. Corresponds to the clip qualification and publisher review gate in `aai/src/agents/publishingAgent.ts`. |
-| **Exp-8** | **Intelligent Customer Support System with Escalation (SaaS Domain):** Implement 3D query classification (Intent, Complexity, Priority P1-P4), approved knowledge base retrieval, SLA deadline tracking, ticket lifecycle state machine (Open -> Triaged -> Assigned -> Resolved -> Closed), notification retries with exponential backoff, and audit logging. | Implemented in `experiments/exp8_customer_support/` (`customer_support.py`, `classifier.py`, `resolver.py`, `ticket_manager.py`, `notifications.py`, `test_support.py`, `customer_queries.csv`, `knowledge_base.json`, `config.json`, `audit_log.csv`). Features P1 outage overrides, ticket reopening, and SLA breach monitors. Connects with the issue tracking and feedback mechanism in `frontend/src/lib/site.ts`. |
-| **Exp-9** | **Micro Project – End-to-End Autonomous Agentic System Design:** Comprehensive production-grade agentic pipeline featuring multi-agent coordination, planner-reviewer workflows, tool integration (FFmpeg, AudioSet, Whisper, LLMs), observability, and full-stack interactive UI. | Implemented as the core project **CLUTCHCUT AI / viralbits** (`cutcutv2/`). Features 10 specialized agent roles (`aai/src/agents/`), multi-signal moment fusion (`frontend/src/lib/highlights/moments.ts`), on-device AudioSet/Whisper inference, hardware-accelerated 9:16 rendering, interactive framing studio, and automated social publishing. |
+| Planner | Builds the run plan from the settings, checks the AI key works, replans the transcription passes | rules |
+| Listener | Measures voice, loudness and pitch every second; shortlists moments | audio analysis (on device) |
+| Chat reader | Scores chat surges from a replay file | chat replay parser |
+| Reaction detector | Hears laughter and shouting at each peak | AudioSet model (on device) |
+| Transcriber | Writes down the words around each moment | Groq / OpenAI Whisper → local Whisper |
+| Watcher | Looks at faces, motion and screen text | face and motion model, OCR |
+| Ranker | Weighted fusion of every signal plus the person's past ratings | weighted signal fusion |
+| Judge | Reviews finalists, sets cuts, writes titles | the person's AI model → signal ranker |
+| Router | Confidence (high / medium / low) and routing: keep, send to the person, or drop | confidence rules |
+| Editor | Cuts, frames and captions each clip | WebCodecs renderer |
 
----
+Code: [`frontend/src/lib/highlights/agents.ts`](frontend/src/lib/highlights/agents.ts) (trace, tool chain, planner, router), wired into [`pipeline.worker.ts`](frontend/src/lib/highlights/pipeline.worker.ts). Tests: [`agents.test.ts`](frontend/src/lib/highlights/agents.test.ts).
 
-### 🔬 Running All Experiment Tests
-A master test orchestrator is provided to verify all 8 lab experiment suites at once:
-```bash
-cd experiments
-python run_all_experiments.py
-```
-To run an individual experiment test:
-```bash
-# Example for Experiment 1:
-cd experiments/exp1_deterministic_tutor && python test_tutor.py
+## Lab concepts used in the app
 
-# Example for Experiment 6 (MCP):
-cd experiments/exp6_mcp_developer && python test_mcp_developer.py
-```
+| Lab | Concept | Where it lives in the app |
+| :--- | :--- | :--- |
+| Exp-1 | Deterministic behaviour, structured output contracts | Free mode gives the same clips for the same video; the Planner and Router are pure rules (same input, same plan and decision); the AI judge answers against a JSON schema (`VERDICT_SCHEMA` in `selection.ts`) |
+| Exp-2 | Rule-based thresholds, risk and confidence | A moment only counts if it beats the 2 minutes before it (`analyze.ts`); the Router's confidence levels and its 30/100 drop floor (`agents.ts`) |
+| Exp-3 | Tool contracts, error classification, retries (max 3), fallbacks | `ToolChain` in `agents.ts`: errors are classed (auth, rate-limit, network, unavailable, bad-output); dropped connections are retried up to 3 times with exponential backoff; busy servers are retried by the HTTP layer (`fetchWithRetry` in `providers.ts`); a bad key or quota switches that tool off for the rest of the run (circuit breaker) and the next tool takes over |
+| Exp-5 | Planner, router, shared state, human in the loop | `planRun` decides the agents; every agent writes into the same candidate list; clips the Router is unsure of are marked "your call" and the person's thumbs up / down feeds the Ranker's learned taste next run |
+| Exp-7 | Weighted scoring, multi-tier routing, audit log | Signal fusion in `moments.ts`; keep / review / drop tiers in `routeMoments`; every decision is in the run trace |
+| Exp-8 | Escalation when automation is unsure | When the AI judge and the signals disagree by more than 35 points, the clip is escalated to the person instead of being trusted |
+| Exp-9 | Observability | The live agent board on the work screen; "how this run worked" on the clips screen (steps, tool calls, retries, fallbacks, time per agent); run reports saved on the device |
+
+The standalone Python versions of Exp-1 to Exp-8 from the lab manual are kept in [`experiments/`](experiments/) (`python experiments/run_all_experiments.py`).
 
 ---
 

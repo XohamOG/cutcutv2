@@ -312,7 +312,7 @@ export function selectBySignals(candidates: Candidate[], count: number, length: 
   return dedupeAndTake(moments, count);
 }
 
-function signalsOf(c: Candidate): { label: string; value: number }[] {
+export function signalsOf(c: Candidate): { label: string; value: number }[] {
   return [
     { label: "voice excitement", value: c.voice },
     { label: "laughter", value: c.laughter ?? 0 },

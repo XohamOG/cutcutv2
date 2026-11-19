@@ -1818,3 +1818,111 @@
     max-width: 244px;
   }
 }
+
+/* Agents: the live board, the clip confidence chip and the run trace */
+.agentList {
+  display: grid;
+  gap: 6px;
+  width: min(460px, 92vw);
+  padding: 0;
+  margin: 0;
+  font: 0.8125rem/1.3 var(--font-maax-mono);
+  list-style: none;
+}
+
+.agentRow {
+  display: grid;
+  grid-template-columns: 10px 11.5em 1fr auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--color-pebble);
+  transition: color 200ms ease;
+}
+
+.agentRow[data-state="done"],
+.agentRow[data-state="working"],
+.agentRow[data-state="fell back"] {
+  color: var(--color-ink);
+}
+
+.agentDot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.agentRow[data-state="done"] .agentDot {
+  background: currentColor;
+}
+
+.agentRow[data-state="working"] .agentDot {
+  background: var(--color-signal-orange);
+  border-color: var(--color-signal-orange);
+}
+
+.agentRow[data-state="fell back"] .agentState,
+.agentRow[data-state="failed"] .agentState {
+  color: var(--color-danger);
+}
+
+.agentName {
+  font-weight: 600;
+}
+
+.agentTool {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agentState {
+  font-size: 0.75rem;
+}
+
+.chip {
+  padding: 2px 9px;
+  font-size: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+}
+
+.chipReview {
+  color: var(--color-paper);
+  background: var(--color-signal-orange);
+  border-color: var(--color-signal-orange);
+}
+
+.reviewLine {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.traceList {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.2em;
+  margin: 0;
+  font: 0.75rem/1.45 var(--font-maax-mono);
+  overflow-wrap: anywhere;
+}
+
+.traceList li[data-status="fallback"] .traceStatus,
+.traceList li[data-status="failed"] .traceStatus {
+  color: var(--color-danger);
+}
+
+.traceWhy {
+  color: var(--color-pebble);
+}
+
+@media (max-width: 480px) {
+  .agentRow {
+    grid-template-columns: 10px 10em 1fr;
+  }
+
+  .agentState {
+    display: none;
+  }
+}
