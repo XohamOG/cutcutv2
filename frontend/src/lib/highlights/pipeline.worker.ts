@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import type { AudioFeatures, Candidate, ClipResult, ClipSettings, EditRequest, RunOptions, RunReport, RunRequest, SelectedMoment, WorkerEvent, WorkerRequest, Word } from "./types";
 import { analyzeSignals, applyReactionBoost } from "./analyze.ts";
-import { collapseRepeats, explainRanks, selectBySignals } from "./selection.ts";
+import { applyVerdicts, collapseRepeats, explainRanks, selectBySignals } from "./selection.ts";
 import { applyMoments, learnTaste, speechExtras } from "./moments.ts";
 import { createScreenReader, releaseFaceModel, watchMoment, type ScreenReader } from "./vision.ts";
 import { parseLiveChat } from "./signals.ts";
@@ -11,7 +11,8 @@ import { breathe, setGentle } from "./pace.ts";
 import { waveformBars } from "./progress.ts";
 import { measureAudio, openMedia, readPcm16k, type OpenedMedia } from "./media.ts";
 import { assertBrowserCanRender, outroLength, renderClip } from "./render.ts";
-import { AGENT_LABELS, LOCAL_STT, SIGNAL_RANKER, ToolChain, Trace, planRun, routeMoments, sttToolName, type PlanStep, type RouteDecision, type Tool } from "./agents.ts";
+import { AGENT_LABELS, BACKEND_AGENTS, LOCAL_STT, SIGNAL_RANKER, ToolChain, Trace, planRun, routeMoments, sttToolName, type PlanStep, type RouteDecision, type Tool } from "./agents.ts";
+import { backendReady, judgeWithAgents } from "./agentApi.ts";
 import { DEFAULT_CAPTIONS } from "./templates.ts";
 import { deleteClip, hashKey, listRatings, loadClip, markRunFinished, remember, resumableSettings, saveClip, saveRating, saveRunReport, setLastRun, sourceFingerprint, updateClip } from "./storage.ts";
 
@@ -31,6 +32,10 @@ const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** One trace per run: every agent step lands here and is streamed to the page as it happens. */
 let trace = new Trace();
 let plan: PlanStep[] = [];
+/** Whether the LangGraph backend answered at the start of this run. */
+let backendUp = false;
+/** Moments the backend Reviewer sent to the person, by id. */
+let reviewFlags = new Map<number, string>();
 
 /** Time spent in each stage of the current run, for the run report. */
 const stageSeconds: Record<string, number> = {};
@@ -171,6 +176,21 @@ async function chooseMoments(file: File, candidates: Candidate[], options: RunOp
   const { llm } = options;
   const bySignals: Tool<Candidate[], SelectedMoment[]> = { name: SIGNAL_RANKER, run: async (list) => selectBySignals(list, options.clipCount, options.length) };
   const tools: Tool<Candidate[], SelectedMoment[]>[] = [bySignals];
+  const agentTeam: Tool<Candidate[], SelectedMoment[]> = {
+    name: BACKEND_AGENTS,
+    run: async (list) => {
+      progress("judging", 0, `The agent team is judging ${list.length} moments`);
+      const key = `agents:${fp}:${options.clipCount}:${options.length}:${list.map((c) => `${c.peakSec}/${c.words.length}`).join(",")}`;
+      const out = await remember(key, async () => {
+        const { verdicts, flags } = await judgeWithAgents(list, options.clipCount, options.length, file.name, (step) => trace.add(step));
+        return { verdicts, flags: [...flags] };
+      });
+      const moments = applyVerdicts(list, out.verdicts, options.clipCount, options.length);
+      if (!moments.length) throw new Error("The agents didn’t approve any moment.");
+      reviewFlags = new Map(out.flags);
+      return moments;
+    },
+  };
   if (llm && hasTranscript) {
     tools.unshift({
       name: llm.model,
@@ -186,9 +206,10 @@ async function chooseMoments(file: File, candidates: Candidate[], options: RunOp
   } else if (llm) {
     trace.add({ agent: "judge", action: "skip the AI judge", tool: llm.model, status: "skipped", ms: 0, detail: "no transcript to judge" });
   }
+  if (backendUp) tools.unshift(agentTeam);
   const { output, tool } = await new ToolChain("judge", tools, trace).call(`pick up to ${options.clipCount} of ${count(candidates.length, "finalist")}`, candidates);
   const usedLlm = tool !== SIGNAL_RANKER;
-  if (llm && hasTranscript && !usedLlm) post({ type: "warn", message: "The AI judge didn’t give a usable answer, so clips are ranked by signals alone." });
+  if ((backendUp || (llm && hasTranscript)) && !usedLlm) post({ type: "warn", message: "The AI judge didn’t give a usable answer, so clips are ranked by signals alone." });
   return { moments: output, usedLlm };
 }
 
@@ -301,9 +322,11 @@ async function report(options: RunOptions, outcome: RunReport["outcome"], error?
 async function run({ file, chatText, options }: RunRequest): Promise<void> {
   setGentle(options.gentle ?? false);
   trace = new Trace((step) => post({ type: "trace", step }));
+  reviewFlags = new Map();
   const planned = performance.now();
-  plan = planRun({ hasChat: Boolean(chatText), stt: options.stt.provider, llm: options.llm && { provider: options.llm.provider, model: options.llm.model }, watchVideo: options.watchVideo, clipCount: options.clipCount });
-  trace.add({ agent: "planner", action: `planned ${plan.length} agents`, status: "ok", ms: performance.now() - planned, detail: plan.map((p) => AGENT_LABELS[p.agent]).join(" → ") });
+  backendUp = await backendReady();
+  plan = planRun({ hasChat: Boolean(chatText), stt: options.stt.provider, llm: options.llm && { provider: options.llm.provider, model: options.llm.model }, watchVideo: options.watchVideo, clipCount: options.clipCount, backend: backendUp });
+  trace.add({ agent: "planner", action: `planned ${plan.length} agents`, status: "ok", ms: performance.now() - planned, detail: `${plan.map((p) => AGENT_LABELS[p.agent]).join(" → ")}; agents backend ${backendUp ? "on" : "off"}` });
   post({ type: "plan", steps: plan });
   await assertBrowserCanRender();
   if (options.llm) {
@@ -363,7 +386,7 @@ async function run({ file, chatText, options }: RunRequest): Promise<void> {
   const fitted = options.length === "auto" ? moments : moments.map((m) => ({ ...m, endSec: m.endSec - outroLength(options.outro, m.endSec, media.durationSec) }));
 
   const routing = performance.now();
-  const { kept, dropped } = routeMoments(fitted);
+  const { kept, dropped } = routeMoments(fitted, reviewFlags);
   const review = kept.filter((r) => r.decision.route === "review").length;
   for (const d of dropped) trace.add({ agent: "router", action: `dropped "${d.moment.title.slice(0, 40)}"`, status: "ok", ms: 0, detail: d.decision.why });
   trace.add({ agent: "router", action: `${kept.length - review} kept, ${review} sent to you, ${dropped.length} dropped`, tool: "confidence rules", status: "ok", ms: performance.now() - routing });

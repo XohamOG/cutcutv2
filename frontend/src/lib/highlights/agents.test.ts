@@ -91,3 +91,26 @@ test("drops never leave a run with no clips", () => {
   assert.equal(some.kept.length, 1);
   assert.equal(some.dropped.length, 1);
 });
+
+test("with the agents backend up, the judge tries the agent team first and keeps the in-browser judges as fallbacks", () => {
+  const plan = planRun({ hasChat: false, stt: "local", llm: { provider: "gemini", model: "gemini-flash-latest" }, watchVideo: false, clipCount: 5, backend: true });
+  assert.deepEqual(plan.find((s) => s.agent === "judge")?.tools, ["langgraph agents", "gemini-flash-latest", "signal ranker"]);
+  const off = planRun({ hasChat: false, stt: "local", watchVideo: false, clipCount: 5, backend: false });
+  assert.deepEqual(off.find((s) => s.agent === "judge")?.tools, ["signal ranker"]);
+});
+
+test("a moment the backend reviewer flagged goes to the person even with a high score", () => {
+  const strong = moment(90, { voice: 0.9, laughter: 0.9 });
+  assert.equal(routeMoments([strong]).kept[0].decision.route, "keep");
+  const flagged = routeMoments([strong], new Map([[0, "the judge kept it but the screener rated it 2/10"]]));
+  assert.deepEqual(flagged.kept[0].decision, { route: "review", confidence: "low", why: "the judge kept it but the screener rated it 2/10" });
+});
+
+test("model tokens from backend steps add up in the trace totals", () => {
+  const totals = summarizeTrace([
+    { agent: "screener", action: "a", status: "ok", ms: 5, tokens: 300 },
+    { agent: "judge", action: "b", status: "ok", ms: 9, tokens: 1200 },
+    { agent: "editor", action: "c", status: "ok", ms: 1 },
+  ]);
+  assert.equal(totals.tokens, 1500);
+});

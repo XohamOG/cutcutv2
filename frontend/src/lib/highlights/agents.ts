@@ -6,7 +6,8 @@
 import type { Candidate, LlmProvider, SelectedMoment, SttProvider } from "./types";
 import { signalsOf } from "./selection.ts";
 
-export type AgentName = "planner" | "listener" | "chat" | "reactions" | "transcriber" | "watcher" | "ranker" | "judge" | "router" | "editor";
+/** The last four after "judge" run in the LangGraph backend when it is up. */
+export type AgentName = "planner" | "listener" | "chat" | "reactions" | "transcriber" | "watcher" | "ranker" | "judge" | "router" | "editor" | "screener" | "supervisor" | "reviewer";
 
 export const AGENT_LABELS: Record<AgentName, string> = {
   planner: "Planner",
@@ -19,6 +20,9 @@ export const AGENT_LABELS: Record<AgentName, string> = {
   judge: "Judge",
   router: "Router",
   editor: "Editor",
+  screener: "Screener",
+  supervisor: "Supervisor",
+  reviewer: "Reviewer",
 };
 
 // ---------------------------------------------------------------- trace (observability)
@@ -34,6 +38,8 @@ export interface TraceStep {
   tool?: string;
   attempts?: number;
   detail?: string;
+  /** Model tokens the step spent (backend agents only). */
+  tokens?: number;
 }
 
 /** Every agent step in one run, in order. Never holds keys, file names or transcripts. */
@@ -70,6 +76,7 @@ export interface TraceTotals {
   retries: number;
   fallbacks: number;
   failures: number;
+  tokens: number;
   msByAgent: Partial<Record<AgentName, number>>;
 }
 
@@ -82,6 +89,7 @@ export function summarizeTrace(steps: TraceStep[]): TraceTotals {
     retries: steps.reduce((n, s) => n + Math.max(0, (s.attempts ?? 1) - 1), 0),
     fallbacks: steps.filter((s) => s.status === "fallback").length,
     failures: steps.filter((s) => s.status === "failed").length,
+    tokens: steps.reduce((n, s) => n + (s.tokens ?? 0), 0),
     msByAgent,
   };
 }
@@ -204,12 +212,15 @@ export interface PlanInput {
   llm?: { provider: LlmProvider; model: string };
   watchVideo: boolean;
   clipCount: number;
+  /** The LangGraph agents backend answered its health check. */
+  backend?: boolean;
 }
 
 const STT_NAMES: Record<SttProvider, string> = { local: "whisper (on this device)", groq: "groq whisper", openai: "openai whisper" };
 export const LOCAL_STT = STT_NAMES.local;
 export const sttToolName = (provider: SttProvider) => STT_NAMES[provider];
 export const SIGNAL_RANKER = "signal ranker";
+export const BACKEND_AGENTS = "langgraph agents";
 
 /** Decides, before any work starts, which agents run and which tools each one tries. The same settings always give the same plan. */
 export function planRun(input: PlanInput): PlanStep[] {
@@ -226,10 +237,13 @@ export function planRun(input: PlanInput): PlanStep[] {
   });
   if (input.watchVideo) steps.push({ agent: "watcher", task: "look at the picture around the strongest moments", tools: ["face and motion model", "screen text reader"], why: "watching the video is turned on" });
   steps.push({ agent: "ranker", task: "fuse every signal and your past ratings into one ranking", tools: ["weighted signal fusion"], why: "keeps the strongest moments as finalists" });
+  const judgeTools = [...(input.backend ? [BACKEND_AGENTS] : []), ...(input.llm ? [input.llm.model] : []), SIGNAL_RANKER];
   steps.push(
-    input.llm
-      ? { agent: "judge", task: `review the finalists and pick ${input.clipCount}`, tools: [input.llm.model, SIGNAL_RANKER], why: "an AI key was added; the signal ranker is the fallback" }
-      : { agent: "judge", task: `pick the top ${input.clipCount}`, tools: [SIGNAL_RANKER], why: "no AI key, so picks come from the signals alone" }
+    input.backend
+      ? { agent: "judge", task: `hand the finalists to the agent team (planner, screeners, judge, reviewer) and pick ${input.clipCount}`, tools: judgeTools, why: "the LangGraph backend is running; the in-browser judges are the fallback" }
+      : input.llm
+        ? { agent: "judge", task: `review the finalists and pick ${input.clipCount}`, tools: judgeTools, why: "an AI key was added; the signal ranker is the fallback" }
+        : { agent: "judge", task: `pick the top ${input.clipCount}`, tools: judgeTools, why: "no AI key, so picks come from the signals alone" }
   );
   steps.push({ agent: "router", task: "score confidence and send unsure clips to you", tools: ["confidence rules"], why: "a person decides when the agents disagree" });
   steps.push({ agent: "editor", task: "cut, frame and caption each clip", tools: ["webcodecs renderer"], why: "clips are made on this device" });
@@ -280,9 +294,15 @@ export interface Routed {
   decision: RouteDecision;
 }
 
-/** Routes every moment. Drops are only carried out while at least one clip remains. */
-export function routeMoments(moments: SelectedMoment[]): { kept: Routed[]; dropped: Routed[] } {
-  const all = moments.map((moment) => ({ moment, decision: routeMoment(moment) }));
+/**
+ * Routes every moment. Drops are only carried out while at least one clip remains.
+ * `flags` are moments the backend Reviewer wants a person to look at; they go to review whatever their score.
+ */
+export function routeMoments(moments: SelectedMoment[], flags: ReadonlyMap<number, string> = new Map()): { kept: Routed[]; dropped: Routed[] } {
+  const all = moments.map((moment): Routed => {
+    const flagged = flags.get(moment.candidate.id);
+    return { moment, decision: flagged ? { route: "review", confidence: "low", why: flagged } : routeMoment(moment) };
+  });
   const survivors = all.filter((r) => r.decision.route !== "drop");
   if (!survivors.length) return { kept: all.map((r) => ({ ...r, decision: { route: "review", confidence: "low", why: r.decision.why } })), dropped: [] };
   return { kept: survivors, dropped: all.filter((r) => r.decision.route === "drop") };

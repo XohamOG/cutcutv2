@@ -33,13 +33,21 @@ function toolOf(step: PlanStep, trace: TraceStep[]): string {
   return step.tools[step.tools.indexOf(last.tool ?? "") + 1] ?? last.tool ?? step.tools[0];
 }
 
+/** Backend agents that join the board under the Judge once they report a step. */
+const TEAM: AgentName[] = ["screener", "supervisor", "reviewer"];
+
 /** Live view of the Planner's agents while a run is going. */
 export function AgentBoard({ plan, trace, stage }: { plan: PlanStep[]; trace: TraceStep[]; stage: string | null }) {
   if (!plan.length) return null;
   const working = stage ? STAGE_AGENT[stage] : undefined;
+  const team: PlanStep[] = TEAM.flatMap((agent) => {
+    const first = trace.find((s) => s.agent === agent);
+    return first ? [{ agent, task: first.action, tools: [first.tool ?? "rules"], why: "agent backend" }] : [];
+  });
+  const rows = plan.flatMap((step) => (step.agent === "judge" ? [step, ...team] : [step]));
   return (
     <ol className={styles.agentList} aria-label="Agents in this run">
-      {plan.map((step) => {
+      {rows.map((step) => {
         const state = stateOf(step.agent, trace, step.agent === working);
         const fellBack = trace.some((s) => s.agent === step.agent && s.status === "fallback");
         return (
@@ -64,7 +72,7 @@ export function RunTraceView({ plan, trace }: { plan: PlanStep[]; trace: TraceSt
   return (
     <div className={styles.group}>
       <p className={styles.caption}>
-        {totals.steps} steps · {totals.toolCalls} tool calls · {totals.retries} retries · {totals.fallbacks} fallbacks · {totals.failures} failures
+        {totals.steps} steps · {totals.toolCalls} tool calls · {totals.retries} retries · {totals.fallbacks} fallbacks · {totals.failures} failures{totals.tokens ? ` · ${totals.tokens.toLocaleString("en")} model tokens` : ""}
       </p>
       {slowest.length > 0 && (
         <p className={styles.caption}>Most time: {slowest.map(([agent, ms]) => `${AGENT_LABELS[agent as AgentName]} ${seconds(ms)}`).join(", ")}</p>
@@ -82,7 +90,7 @@ export function RunTraceView({ plan, trace }: { plan: PlanStep[]; trace: TraceSt
         {trace.map((s, i) => (
           <li key={i} data-status={s.status}>
             <b>{AGENT_LABELS[s.agent]}</b> {s.action}
-            {s.tool ? ` · ${s.tool}` : ""} · <span className={styles.traceStatus}>{s.status}{s.attempts && s.attempts > 1 ? ` after ${s.attempts} tries` : ""}</span> · {seconds(s.ms)}
+            {s.tool ? ` · ${s.tool}` : ""} · <span className={styles.traceStatus}>{s.status}{s.attempts && s.attempts > 1 ? ` after ${s.attempts} tries` : ""}</span> · {seconds(s.ms)}{s.tokens ? ` · ${s.tokens} tokens` : ""}
             {s.detail && <span className={styles.traceWhy}> {s.detail}</span>}
           </li>
         ))}
